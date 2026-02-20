@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "webapp",
+  "main": "src/index.tsx",
+  "compatibility_date": "2024-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "pages_build_output_dir": "./dist",
+
+  // D1 Database configuration
+  // For production deployment, you'll need to create the database with:
+  // npx wrangler d1 create webapp-production
+  // Then add the database_id here
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "webapp-production",
+      "database_id": "placeholder-will-be-set-on-production-deploy"
+    }
+  ]
+}
