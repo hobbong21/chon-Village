@@ -1110,7 +1110,7 @@ app.get('/', (c) => {
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-        <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+        <script src="/static/korean-family-tree.js"></script>
         <script src="/static/family-network.js"></script>
         <script src="/static/app.js"></script>
     </body>

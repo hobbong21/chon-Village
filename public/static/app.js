@@ -76,7 +76,7 @@ async function loadPage(page) {
       await loadNetwork();
       break;
     case 'family':
-      await loadFamilyTree();
+      await loadKoreanFamilyTree();
       break;
     case 'profile':
       await loadProfile(currentUser.id);
@@ -939,9 +939,6 @@ async function loadCompactFamilyNetwork() {
   if (!container) return;
   
   try {
-    // Load D3.js if not already loaded
-    await loadD3Library();
-    
     // Fetch family data
     const response = await axios.get('/api/family/tree');
     const relatives = response.data.relatives || [];
@@ -949,8 +946,8 @@ async function loadCompactFamilyNetwork() {
     // Update stats
     updateFamilyStats(relatives);
     
-    // Render compact network
-    renderCompactFamilyNetwork(relatives);
+    // Render compact Korean style network
+    renderCompactKoreanFamilyTree(relatives);
     
   } catch (error) {
     console.error('Error loading compact family network:', error);
