@@ -1519,9 +1519,6 @@ app.get('/', (c) => {
                             <a href="#" class="nav-link text-gray-700 hover:text-blue-600" data-page="feed">
                                 <i class="fas fa-home mr-1"></i>홈
                             </a>
-                            <a href="#" class="nav-link text-gray-700 hover:text-blue-600" data-page="network">
-                                <i class="fas fa-users mr-1"></i>네트워크
-                            </a>
                             <a href="#" class="nav-link text-gray-700 hover:text-blue-600" data-page="nodes">
                                 <i class="fas fa-sitemap mr-1"></i>노드
                             </a>
@@ -1625,7 +1622,12 @@ app.get('/', (c) => {
                 <!-- Right Sidebar -->
                 <div class="md:col-span-3">
                     <div class="card">
-                        <h3 class="font-bold mb-4">추천 연결</h3>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold">추천 연결</h3>
+                            <button onclick="refreshSuggestedConnections()" class="text-blue-600 hover:text-blue-800 transition" title="새로고침">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
                         <div id="suggestedConnections"></div>
                     </div>
                 </div>

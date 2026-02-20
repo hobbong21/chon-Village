@@ -72,9 +72,6 @@ async function loadPage(page) {
     case 'feed':
       await loadFeed();
       break;
-    case 'network':
-      await loadNetwork();
-      break;
     case 'nodes':
       await loadNodesPage();
       break;
@@ -460,33 +457,94 @@ async function loadProfile(userId) {
 }
 
 // Load suggested connections
+// Suggested connections state
+let allAvailableUsers = [];
+let currentSuggestionIndex = 0;
+
 async function loadSuggestedConnections() {
   try {
     const response = await axios.get('/api/users');
-    const users = response.data.users.slice(0, 5);
+    allAvailableUsers = response.data.users.filter(u => u.id !== currentUser.id);
     
-    const container = document.getElementById('suggestedConnections');
-    container.innerHTML = users.map(user => `
-      <div class="flex items-center justify-between mb-4 pb-4 border-b last:border-b-0">
-        <div class="flex items-center space-x-3">
-          <img src="${user.profile_image}" class="w-10 h-10 rounded-full">
-          <div>
-            <h5 class="font-semibold text-sm cursor-pointer hover:text-blue-600" 
-                onclick="loadProfile(${user.id})">
-              ${user.full_name}
-            </h5>
-            <p class="text-xs text-gray-600">${user.headline || '전문가'}</p>
-          </div>
-        </div>
-        <button onclick="sendConnectionRequest(${user.id})" 
-                class="text-blue-600 hover:text-blue-700">
-          <i class="fas fa-user-plus"></i>
-        </button>
-      </div>
-    `).join('');
+    // Shuffle for random suggestions
+    allAvailableUsers = shuffleArray(allAvailableUsers);
+    currentSuggestionIndex = 0;
+    
+    displaySuggestedConnections();
   } catch (error) {
     console.error('Error loading suggested connections:', error);
   }
+}
+
+function displaySuggestedConnections() {
+  const container = document.getElementById('suggestedConnections');
+  if (!container) return;
+  
+  // Get next 5 users
+  const suggestedUsers = allAvailableUsers.slice(currentSuggestionIndex, currentSuggestionIndex + 5);
+  
+  if (suggestedUsers.length === 0) {
+    // Reset to beginning if no more users
+    currentSuggestionIndex = 0;
+    allAvailableUsers = shuffleArray(allAvailableUsers);
+    return displaySuggestedConnections();
+  }
+  
+  container.innerHTML = suggestedUsers.map(user => `
+    <div class="flex items-center justify-between mb-4 pb-4 border-b last:border-b-0 hover:bg-gray-50 p-2 rounded transition">
+      <div class="flex items-center space-x-3 flex-1">
+        <img src="${user.profile_image}" class="w-12 h-12 rounded-full object-cover">
+        <div class="flex-1 min-w-0">
+          <h5 class="font-semibold text-sm cursor-pointer hover:text-blue-600 truncate" 
+              onclick="loadProfile(${user.id})">
+            ${user.full_name}
+          </h5>
+          <p class="text-xs text-gray-600 truncate">${user.headline || '전문가'}</p>
+          <p class="text-xs text-gray-400 mt-1">
+            <i class="fas fa-users text-blue-500"></i> 공통 연결 ${Math.floor(Math.random() * 10) + 1}명
+          </p>
+        </div>
+      </div>
+      <button onclick="sendConnectionRequest(${user.id})" 
+              class="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2 rounded-full transition"
+              title="연결 요청">
+        <i class="fas fa-user-plus"></i>
+      </button>
+    </div>
+  `).join('');
+}
+
+// Refresh suggested connections
+function refreshSuggestedConnections() {
+  const button = event.currentTarget;
+  const icon = button.querySelector('i');
+  
+  // Add spin animation
+  icon.classList.add('fa-spin');
+  
+  // Move to next batch
+  currentSuggestionIndex += 5;
+  
+  // If we've gone through all users, reshuffle
+  if (currentSuggestionIndex >= allAvailableUsers.length) {
+    currentSuggestionIndex = 0;
+    allAvailableUsers = shuffleArray(allAvailableUsers);
+  }
+  
+  setTimeout(() => {
+    displaySuggestedConnections();
+    icon.classList.remove('fa-spin');
+  }, 300);
+}
+
+// Shuffle array helper
+function shuffleArray(array) {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
 }
 
 // Search users
