@@ -39,30 +39,56 @@ function renderFamilyNetworkChart(relatives) {
       </div>
       
       <!-- 범례 -->
-      <div class="mb-4 p-4 bg-gray-50 rounded-lg flex flex-wrap gap-6 text-sm">
-        <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded-full bg-blue-500"></div>
-          <span>아버지</span>
+      <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+        <div class="flex flex-wrap gap-4 text-sm mb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded-full bg-blue-500"></div>
+            <span>아버지</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded-full bg-pink-500"></div>
+            <span>어머니</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded-full bg-green-500"></div>
+            <span>나</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded-full bg-purple-500"></div>
+            <span>배우자</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded-full bg-yellow-500"></div>
+            <span>형제/자녀</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded-full bg-indigo-700"></div>
+            <span>조부모</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded-full bg-orange-400"></div>
+            <span>조카</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded-full border-2 border-red-500 bg-white"></div>
+            <span>미인증</span>
+          </div>
         </div>
-        <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded-full bg-pink-500"></div>
-          <span>어머니</span>
+        <div class="text-xs text-gray-600 mt-2 flex items-center gap-4">
+          <span>💡 팁: 노드를 드래그하여 위치를 조정할 수 있습니다</span>
+          <button onclick="toggleLegendExpand()" id="legendToggle" class="ml-auto text-indigo-600 hover:text-indigo-800">
+            <i class="fas fa-info-circle mr-1"></i>더보기
+          </button>
         </div>
-        <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded-full bg-green-500"></div>
-          <span>나</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded-full bg-purple-500"></div>
-          <span>배우자</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded-full bg-yellow-500"></div>
-          <span>형제/자녀</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded-full border-2 border-red-500 bg-white"></div>
-          <span>미인증</span>
+        <div id="legendExpanded" class="hidden mt-3 pt-3 border-t text-xs text-gray-700">
+          <div class="grid grid-cols-2 gap-2">
+            <div><strong>실선:</strong> 인증된 관계</div>
+            <div><strong>점선:</strong> 미인증 관계</div>
+            <div><strong>파란 선:</strong> 부모-자식</div>
+            <div><strong>분홍 선:</strong> 부부</div>
+            <div><strong>주황 선:</strong> 형제</div>
+            <div><strong>진한 파란 선:</strong> 조부모-손자</div>
+          </div>
         </div>
       </div>
       
@@ -259,6 +285,13 @@ function prepareNetworkData(relatives) {
         type: 'parent-child',
         verified: relative.is_verified
       });
+    } else if (relative.relation === 'grandfather' || relative.relation === 'grandmother') {
+      links.push({
+        source: targetId,
+        target: 'user-1',
+        type: 'grandparent-grandchild',
+        verified: relative.is_verified
+      });
     } else if (relative.relation === 'spouse') {
       links.push({
         source: 'user-1',
@@ -278,6 +311,13 @@ function prepareNetworkData(relatives) {
         source: 'user-1',
         target: targetId,
         type: 'sibling',
+        verified: relative.is_verified
+      });
+    } else if (relative.relation === 'nephew' || relative.relation === 'niece') {
+      links.push({
+        source: 'user-1',
+        target: targetId,
+        type: 'uncle-nephew',
         verified: relative.is_verified
       });
     }
@@ -306,7 +346,11 @@ function getNodeColor(relation) {
     'self': '#10b981',        // 초록
     'spouse': '#8b5cf6',      // 보라
     'sibling': '#f59e0b',     // 주황
-    'child': '#eab308'        // 노랑
+    'child': '#eab308',       // 노랑
+    'grandfather': '#1e40af', // 진한 파랑
+    'grandmother': '#be185d', // 진한 분홍
+    'nephew': '#fb923c',      // 연한 주황
+    'niece': '#fbbf24'        // 연한 노랑
   };
   return colors[relation] || '#6b7280';
 }
@@ -319,7 +363,11 @@ function getRelationIcon(relation) {
     'self': '😊',
     'spouse': '💑',
     'sibling': '👫',
-    'child': '👶'
+    'child': '👶',
+    'grandfather': '👴',
+    'grandmother': '👵',
+    'nephew': '👦',
+    'niece': '👧'
   };
   return icons[relation] || '👤';
 }
@@ -332,7 +380,11 @@ function getRelationLabel(relation) {
     'self': '본인',
     'spouse': '배우자',
     'sibling': '형제자매',
-    'child': '자녀'
+    'child': '자녀',
+    'grandfather': '할아버지',
+    'grandmother': '할머니',
+    'nephew': '조카',
+    'niece': '조카'
   };
   return labels[relation] || '기타';
 }
@@ -342,7 +394,9 @@ function getLinkColor(type) {
   const colors = {
     'parent-child': '#3b82f6',
     'marriage': '#ec4899',
-    'sibling': '#f59e0b'
+    'sibling': '#f59e0b',
+    'grandparent-grandchild': '#1e40af',
+    'uncle-nephew': '#fb923c'
   };
   return colors[type] || '#6b7280';
 }
@@ -352,7 +406,9 @@ function getLinkLabel(type) {
   const labels = {
     'parent-child': '부모-자식',
     'marriage': '부부',
-    'sibling': '형제'
+    'sibling': '형제',
+    'grandparent-grandchild': '조부모-손자녀',
+    'uncle-nephew': '삼촌-조카'
   };
   return labels[type] || '';
 }
@@ -485,5 +541,19 @@ async function loadFamilyTree() {
         </button>
       </div>
     `;
+  }
+}
+
+// Toggle legend expand
+function toggleLegendExpand() {
+  const expanded = document.getElementById('legendExpanded');
+  const toggle = document.getElementById('legendToggle');
+  
+  if (expanded.classList.contains('hidden')) {
+    expanded.classList.remove('hidden');
+    toggle.innerHTML = '<i class="fas fa-info-circle mr-1"></i>접기';
+  } else {
+    expanded.classList.add('hidden');
+    toggle.innerHTML = '<i class="fas fa-info-circle mr-1"></i>더보기';
   }
 }
