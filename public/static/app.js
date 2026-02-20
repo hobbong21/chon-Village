@@ -523,9 +523,14 @@ async function loadFamilyTree() {
           <i class="fas fa-sitemap mr-2 text-blue-600"></i>
           나의 가족 관계도
         </h2>
-        <button onclick="showAddFamilyMemberModal()" class="btn-primary">
-          <i class="fas fa-plus mr-2"></i>가족 구성원 추가
-        </button>
+        <div class="flex space-x-2">
+          <button onclick="loadFamilyTreeNetwork()" class="btn-secondary">
+            <i class="fas fa-project-diagram mr-2"></i>네트워크 보기
+          </button>
+          <button onclick="showAddFamilyMemberModal()" class="btn-primary">
+            <i class="fas fa-plus mr-2"></i>가족 구성원 추가
+          </button>
+        </div>
       </div>
       
       <div id="familyTreeContent" class="mt-6">
@@ -550,6 +555,19 @@ async function loadFamilyTree() {
         <p class="text-red-600 mt-4">가족 관계도를 불러오는데 실패했습니다.</p>
       </div>
     `;
+  }
+}
+
+// Load family tree network view
+async function loadFamilyTreeNetwork() {
+  try {
+    const response = await axios.get('/api/family/tree');
+    const { relatives } = response.data;
+    
+    showFamilyTreeNetwork(relatives);
+  } catch (error) {
+    console.error('Error loading family tree:', error);
+    alert('가족 관계도를 불러오는데 실패했습니다.');
   }
 }
 
