@@ -423,6 +423,505 @@ app.post('/api/family/members', async (c) => {
   return c.json({ success: true, member_id: memberId })
 })
 
+// ============================================
+// NODE EXPANSION SYSTEM APIs
+// ============================================
+
+// Get all nodes (with filtering)
+app.get('/api/nodes', async (c) => {
+  const { DB } = c.env
+  const nodeType = c.req.query('type') // filter by type
+  const isPublic = c.req.query('public') // filter by visibility
+  
+  let query = `
+    SELECT 
+      n.id,
+      n.name,
+      n.description,
+      nt.name as node_type,
+      nt.icon as type_icon,
+      nt.color as type_color,
+      n.visibility,
+      n.join_approval_required,
+      n.verification_level,
+      n.member_count,
+      n.created_at,
+      u.full_name as creator_name
+    FROM nodes n
+    JOIN node_types nt ON n.node_type_id = nt.id
+    JOIN users u ON n.creator_id = u.id
+    WHERE 1=1
+  `
+  
+  const params = []
+  if (nodeType) {
+    query += ` AND nt.name = ?`
+    params.push(nodeType)
+  }
+  if (isPublic !== undefined) {
+    query += ` AND n.visibility = ?`
+    params.push(isPublic === 'true' ? 'public' : 'private')
+  }
+  
+  query += ` ORDER BY n.created_at DESC LIMIT 100`
+  
+  const { results: nodes } = await DB.prepare(query).bind(...params).all()
+  return c.json({ nodes })
+})
+
+// Get single node details
+app.get('/api/nodes/:id', async (c) => {
+  const { DB } = c.env
+  const nodeId = c.req.param('id')
+  const userId = 1 // TODO: Get from auth token
+  
+  // Get node info
+  const node = await DB.prepare(`
+    SELECT 
+      n.*,
+      nt.name as node_type,
+      nt.icon as type_icon,
+      nt.color as type_color,
+      u.full_name as creator_name
+    FROM nodes n
+    JOIN node_types nt ON n.node_type_id = nt.id
+    JOIN users u ON n.creator_id = u.id
+    WHERE n.id = ?
+  `).bind(nodeId).first()
+  
+  if (!node) {
+    return c.json({ error: 'Node not found' }, 404)
+  }
+  
+  // Check if user is member
+  const membership = await DB.prepare(`
+    SELECT 
+      nm.*,
+      nr.role_name,
+      nr.level as role_level,
+      rl.name_ko as level_name,
+      rl.color as level_color
+    FROM node_memberships nm
+    JOIN node_roles nr ON nm.role_id = nr.id
+    LEFT JOIN relationship_levels rl ON nm.relationship_level = rl.level
+    WHERE nm.node_id = ? AND nm.user_id = ?
+  `).bind(nodeId, userId).first()
+  
+  return c.json({ 
+    node,
+    membership: membership || null,
+    is_member: !!membership
+  })
+})
+
+// Get node members
+app.get('/api/nodes/:id/members', async (c) => {
+  const { DB } = c.env
+  const nodeId = c.req.param('id')
+  const userId = 1 // TODO: Get from auth token
+  
+  // Check if user has permission to view members
+  const membership = await DB.prepare(`
+    SELECT relationship_level FROM node_memberships 
+    WHERE node_id = ? AND user_id = ?
+  `).bind(nodeId, userId).first()
+  
+  if (!membership || membership.relationship_level < 2) {
+    return c.json({ error: 'Permission denied' }, 403)
+  }
+  
+  // Get members list
+  const { results: members } = await DB.prepare(`
+    SELECT 
+      u.id,
+      u.full_name,
+      u.email,
+      u.headline,
+      u.profile_image,
+      nm.relationship_level,
+      nm.verification_count,
+      nm.activity_score,
+      nm.joined_at,
+      nr.role_name,
+      nr.level as role_level,
+      rl.name_ko as level_name,
+      rl.color as level_color
+    FROM node_memberships nm
+    JOIN users u ON nm.user_id = u.id
+    JOIN node_roles nr ON nm.role_id = nr.id
+    LEFT JOIN relationship_levels rl ON nm.relationship_level = rl.level
+    WHERE nm.node_id = ?
+    ORDER BY nm.relationship_level DESC, nm.activity_score DESC
+  `).bind(nodeId).all()
+  
+  return c.json({ members })
+})
+
+// Create new node
+app.post('/api/nodes', async (c) => {
+  const { DB } = c.env
+  const userId = 1 // TODO: Get from auth token
+  const {
+    name,
+    description,
+    node_type,
+    visibility,
+    join_approval_required
+  } = await c.req.json()
+  
+  // Get node type ID
+  const nodeTypeRecord = await DB.prepare(`
+    SELECT id FROM node_types WHERE name = ?
+  `).bind(node_type).first()
+  
+  if (!nodeTypeRecord) {
+    return c.json({ error: 'Invalid node type' }, 400)
+  }
+  
+  // Create node
+  const result = await DB.prepare(`
+    INSERT INTO nodes (
+      name, description, node_type_id, creator_id, 
+      visibility, join_approval_required, member_count, verification_level
+    ) VALUES (?, ?, ?, ?, ?, ?, 1, 1)
+  `).bind(
+    name, 
+    description, 
+    nodeTypeRecord.id, 
+    userId,
+    visibility || 'private',
+    join_approval_required !== false ? 1 : 0
+  ).run()
+  
+  const nodeId = result.meta.last_row_id
+  
+  // Create default roles for this node
+  const defaultRolesResult = await DB.prepare(`
+    INSERT INTO node_roles (node_id, role_name, role_name_ko, level, color)
+    VALUES 
+      (?, 'owner', '소유자', 3, '#8b5cf6'),
+      (?, 'admin', '관리자', 2, '#3b82f6'),
+      (?, 'member', '회원', 1, '#10b981')
+  `).bind(nodeId, nodeId, nodeId).run()
+  
+  // Get the owner role ID (first inserted role)
+  const ownerRole = await DB.prepare(`
+    SELECT id FROM node_roles WHERE node_id = ? AND level = 3 LIMIT 1
+  `).bind(nodeId).first()
+  
+  // Add creator as owner member
+  await DB.prepare(`
+    INSERT INTO node_memberships (
+      node_id, user_id, role_id, status,
+      relationship_level, verification_count, 
+      activity_score, joined_at
+    ) VALUES (?, ?, ?, 'approved', 5, 1, 100, datetime('now'))
+  `).bind(nodeId, userId, ownerRole.id).run()
+  
+  return c.json({ 
+    success: true, 
+    node_id: nodeId,
+    message: 'Node created successfully'
+  })
+})
+
+// Join a node
+app.post('/api/nodes/:id/join', async (c) => {
+  const { DB } = c.env
+  const nodeId = c.req.param('id')
+  const userId = 1 // TODO: Get from auth token
+  const { role_id } = await c.req.json()
+  
+  // Check if node exists and is public
+  const node = await DB.prepare(`
+    SELECT visibility, join_approval_required FROM nodes WHERE id = ?
+  `).bind(nodeId).first()
+  
+  if (!node) {
+    return c.json({ error: 'Node not found' }, 404)
+  }
+  
+  if (node.visibility !== 'public') {
+    return c.json({ error: 'This node requires invitation' }, 403)
+  }
+  
+  // Check if already member
+  const existing = await DB.prepare(`
+    SELECT id FROM node_memberships WHERE node_id = ? AND user_id = ?
+  `).bind(nodeId, userId).first()
+  
+  if (existing) {
+    return c.json({ error: 'Already a member' }, 400)
+  }
+  
+  // Add membership
+  const initialLevel = node.join_approval_required ? 1 : 2
+  const initialStatus = node.join_approval_required ? 'pending' : 'approved'
+  
+  await DB.prepare(`
+    INSERT INTO node_memberships (
+      node_id, user_id, role_id, status,
+      relationship_level, verification_count,
+      activity_score, joined_at
+    ) VALUES (?, ?, ?, ?, ?, 0, 10, datetime('now'))
+  `).bind(nodeId, userId, role_id, initialStatus, initialLevel).run()
+  
+  // Update member count
+  await DB.prepare(`
+    UPDATE nodes SET member_count = member_count + 1 WHERE id = ?
+  `).bind(nodeId).run()
+  
+  // Log activity
+  await DB.prepare(`
+    INSERT INTO node_activity_logs (node_id, user_id, activity_type, points)
+    VALUES (?, ?, 'join', 10)
+  `).bind(nodeId, userId).run()
+  
+  return c.json({ 
+    success: true,
+    relationship_level: initialLevel,
+    message: 'Successfully joined the node'
+  })
+})
+
+// Invite user to node
+app.post('/api/nodes/:id/invite', async (c) => {
+  const { DB } = c.env
+  const nodeId = c.req.param('id')
+  const userId = 1 // TODO: Get from auth token (inviter)
+  const { invited_user_id, role_id, message } = await c.req.json()
+  
+  // Check if inviter has permission (level >= 3)
+  const membership = await DB.prepare(`
+    SELECT relationship_level FROM node_memberships 
+    WHERE node_id = ? AND user_id = ?
+  `).bind(nodeId, userId).first()
+  
+  if (!membership || membership.relationship_level < 3) {
+    return c.json({ error: 'Permission denied' }, 403)
+  }
+  
+  // Generate invitation token
+  const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+  
+  // Create invitation
+  await DB.prepare(`
+    INSERT INTO node_invitations (
+      node_id, inviter_id, invited_user_id,
+      role_id, invitation_token, message,
+      expires_at
+    ) VALUES (?, ?, ?, ?, ?, ?, datetime('now', '+7 days'))
+  `).bind(nodeId, userId, invited_user_id, role_id, token, message || null).run()
+  
+  // Award activity points to inviter
+  await DB.prepare(`
+    UPDATE node_memberships 
+    SET activity_score = activity_score + 15
+    WHERE node_id = ? AND user_id = ?
+  `).bind(nodeId, userId).run()
+  
+  await DB.prepare(`
+    INSERT INTO node_activity_logs (node_id, user_id, activity_type, points)
+    VALUES (?, ?, 'invite', 15)
+  `).bind(nodeId, userId).run()
+  
+  return c.json({ 
+    success: true,
+    invitation_token: token,
+    message: 'Invitation sent successfully'
+  })
+})
+
+// Accept invitation
+app.post('/api/invitations/:token/accept', async (c) => {
+  const { DB } = c.env
+  const token = c.req.param('token')
+  const userId = 1 // TODO: Get from auth token
+  
+  // Get invitation
+  const invitation = await DB.prepare(`
+    SELECT * FROM node_invitations 
+    WHERE invitation_token = ? AND invited_user_id = ?
+    AND status = 'pending' AND expires_at > datetime('now')
+  `).bind(token, userId).first()
+  
+  if (!invitation) {
+    return c.json({ error: 'Invalid or expired invitation' }, 404)
+  }
+  
+  // Add membership
+  await DB.prepare(`
+    INSERT INTO node_memberships (
+      node_id, user_id, role_id, status,
+      relationship_level, verification_count,
+      activity_score, joined_at
+    ) VALUES (?, ?, ?, 'approved', 2, 0, 10, datetime('now'))
+  `).bind(invitation.node_id, userId, invitation.role_id).run()
+  
+  // Update invitation status
+  await DB.prepare(`
+    UPDATE node_invitations 
+    SET status = 'accepted', accepted_at = datetime('now')
+    WHERE id = ?
+  `).bind(invitation.id).run()
+  
+  // Update member count
+  await DB.prepare(`
+    UPDATE nodes SET member_count = member_count + 1 WHERE id = ?
+  `).bind(invitation.node_id).run()
+  
+  return c.json({ 
+    success: true,
+    node_id: invitation.node_id,
+    message: 'Invitation accepted'
+  })
+})
+
+// Verify membership (mutual verification)
+app.put('/api/memberships/:id/verify', async (c) => {
+  const { DB } = c.env
+  const membershipId = c.req.param('id')
+  const userId = 1 // TODO: Get from auth token (verifier)
+  
+  // Get membership info
+  const membership = await DB.prepare(`
+    SELECT node_id, user_id FROM node_memberships WHERE id = ?
+  `).bind(membershipId).first()
+  
+  if (!membership) {
+    return c.json({ error: 'Membership not found' }, 404)
+  }
+  
+  // Check if verifier is member of same node
+  const verifierMembership = await DB.prepare(`
+    SELECT id, relationship_level FROM node_memberships 
+    WHERE node_id = ? AND user_id = ?
+  `).bind(membership.node_id, userId).first()
+  
+  if (!verifierMembership || verifierMembership.relationship_level < 2) {
+    return c.json({ error: 'Permission denied' }, 403)
+  }
+  
+  // Check if already verified by this user
+  const existing = await DB.prepare(`
+    SELECT id FROM membership_verifications 
+    WHERE membership_id = ? AND verifier_id = ?
+  `).bind(membershipId, userId).first()
+  
+  if (existing) {
+    return c.json({ error: 'Already verified by you' }, 400)
+  }
+  
+  // Add verification
+  await DB.prepare(`
+    INSERT INTO membership_verifications (
+      membership_id, verifier_id, verified_at
+    ) VALUES (?, ?, datetime('now'))
+  `).bind(membershipId, userId).run()
+  
+  // Update verification count and activity score
+  await DB.prepare(`
+    UPDATE node_memberships 
+    SET 
+      verification_count = verification_count + 1,
+      activity_score = activity_score + 20
+    WHERE id = ?
+  `).bind(membershipId).run()
+  
+  // Get updated verification count
+  const updated = await DB.prepare(`
+    SELECT verification_count, activity_score FROM node_memberships WHERE id = ?
+  `).bind(membershipId).first()
+  
+  // Check if level upgrade is needed
+  let newLevel = 1
+  if (updated.verification_count >= 10 && updated.activity_score >= 500) {
+    newLevel = 5 // Verified
+  } else if (updated.verification_count >= 5 && updated.activity_score >= 200) {
+    newLevel = 4 // Leader
+  } else if (updated.activity_score >= 100) {
+    newLevel = 3 // Active
+  } else if (updated.verification_count >= 1) {
+    newLevel = 2 // Connected
+  }
+  
+  await DB.prepare(`
+    UPDATE node_memberships SET relationship_level = ? WHERE id = ?
+  `).bind(newLevel, membershipId).run()
+  
+  // Award points to verifier
+  await DB.prepare(`
+    UPDATE node_memberships 
+    SET activity_score = activity_score + 5
+    WHERE id = ?
+  `).bind(verifierMembership.id).run()
+  
+  return c.json({ 
+    success: true,
+    verification_count: updated.verification_count,
+    new_level: newLevel,
+    message: 'Verification added successfully'
+  })
+})
+
+// Get my nodes
+app.get('/api/my-nodes', async (c) => {
+  const { DB } = c.env
+  const userId = 1 // TODO: Get from auth token
+  
+  const { results: nodes } = await DB.prepare(`
+    SELECT 
+      n.id,
+      n.name,
+      n.description,
+      nt.name as node_type,
+      nt.icon as type_icon,
+      nt.color as type_color,
+      nm.relationship_level,
+      nm.verification_count,
+      nm.activity_score,
+      nm.joined_at,
+      nr.role_name,
+      nr.level as role_level,
+      rl.name_ko as level_name,
+      rl.color as level_color
+    FROM node_memberships nm
+    JOIN nodes n ON nm.node_id = n.id
+    JOIN node_types nt ON n.node_type_id = nt.id
+    JOIN node_roles nr ON nm.role_id = nr.id
+    LEFT JOIN relationship_levels rl ON nm.relationship_level = rl.level
+    WHERE nm.user_id = ?
+    ORDER BY nm.relationship_level DESC, nm.joined_at DESC
+  `).bind(userId).all()
+  
+  return c.json({ nodes })
+})
+
+// Get my relationship level summary
+app.get('/api/my-level', async (c) => {
+  const { DB } = c.env
+  const userId = 1 // TODO: Get from auth token
+  
+  const { results: summary } = await DB.prepare(`
+    SELECT 
+      nm.relationship_level,
+      rl.name_ko as level_name,
+      rl.color,
+      COUNT(*) as count
+    FROM node_memberships nm
+    LEFT JOIN relationship_levels rl ON nm.relationship_level = rl.level
+    WHERE nm.user_id = ?
+    GROUP BY nm.relationship_level
+    ORDER BY nm.relationship_level DESC
+  `).bind(userId).all()
+  
+  return c.json({ summary })
+})
+
+// ============================================
+// END OF NODE EXPANSION SYSTEM APIs
+// ============================================
+
 // Get family member details
 app.get('/api/family/members/:id', async (c) => {
   const { DB } = c.env
