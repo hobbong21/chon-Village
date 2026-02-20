@@ -561,7 +561,7 @@ app.get('/login', (c) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>로그인 - ProNetwork</title>
+        <title>로그인 - CHON-Network</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <style>
@@ -642,7 +642,7 @@ app.get('/login', (c) => {
                 <div class="inline-block">
                     <i class="fas fa-network-wired text-5xl text-purple-600 mb-3"></i>
                 </div>
-                <h1 class="text-3xl font-bold text-gray-800 mb-2">ProNetwork</h1>
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">CHON-Network</h1>
                 <p class="text-gray-600">전문가 네트워킹 플랫폼</p>
             </div>
             
@@ -737,7 +737,7 @@ app.get('/login', (c) => {
             
             <!-- Footer -->
             <div class="text-center mt-6 text-xs text-gray-500">
-                <p>로그인하시면 ProNetwork의 
+                <p>로그인하시면 CHON-Network의 
                     <a href="#" class="text-purple-600 hover:underline">이용약관</a> 및 
                     <a href="#" class="text-purple-600 hover:underline">개인정보 처리방침</a>에 
                     동의하는 것으로 간주합니다.
@@ -760,7 +760,7 @@ app.get('/register', (c) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>회원가입 - ProNetwork</title>
+        <title>회원가입 - CHON-Network</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <style>
@@ -825,7 +825,7 @@ app.get('/register', (c) => {
                     <i class="fas fa-network-wired text-5xl text-purple-600 mb-3"></i>
                 </div>
                 <h1 class="text-3xl font-bold text-gray-800 mb-2">회원가입</h1>
-                <p class="text-gray-600">ProNetwork에 오신 것을 환영합니다</p>
+                <p class="text-gray-600">CHON-Network에 오신 것을 환영합니다</p>
             </div>
             
             <!-- Register Form -->
@@ -977,7 +977,7 @@ app.get('/', (c) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>ProNetwork - 전문가 네트워킹 플랫폼</title>
+        <title>CHON-Network - 전문가 네트워킹 플랫폼</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <style>
@@ -993,7 +993,7 @@ app.get('/', (c) => {
                 <div class="flex justify-between items-center h-16">
                     <div class="flex items-center space-x-8">
                         <h1 class="text-2xl font-bold text-blue-600">
-                            <i class="fas fa-network-wired mr-2"></i>ProNetwork
+                            <i class="fas fa-network-wired mr-2"></i>CHON-Network
                         </h1>
                         <div class="hidden md:flex space-x-4">
                             <a href="#" class="nav-link text-gray-700 hover:text-blue-600" data-page="feed">
@@ -1001,9 +1001,6 @@ app.get('/', (c) => {
                             </a>
                             <a href="#" class="nav-link text-gray-700 hover:text-blue-600" data-page="network">
                                 <i class="fas fa-users mr-1"></i>네트워크
-                            </a>
-                            <a href="#" class="nav-link text-gray-700 hover:text-blue-600" data-page="family">
-                                <i class="fas fa-sitemap mr-1"></i>가족관계도
                             </a>
                             <a href="#" class="nav-link text-gray-700 hover:text-blue-600" data-page="profile">
                                 <i class="fas fa-user mr-1"></i>프로필
