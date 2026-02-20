@@ -1029,6 +1029,7 @@ app.get('/', (c) => {
             <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
                 <!-- Left Sidebar -->
                 <div class="md:col-span-3">
+                    <!-- Profile Card -->
                     <div id="profileCard" class="card">
                         <div class="text-center">
                             <img src="https://i.pravatar.cc/150?img=1" 
@@ -1045,6 +1046,53 @@ app.get('/', (c) => {
                                     <span class="font-bold text-blue-600">1,243</span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Family Tree Card -->
+                    <div class="card mt-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-lg">
+                                <i class="fas fa-project-diagram mr-2 text-indigo-600"></i>
+                                가족 관계도
+                            </h3>
+                            <button onclick="toggleFamilyNetwork()" class="text-sm text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-expand-alt"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Compact Family Network Visualization -->
+                        <div id="compactFamilyNetwork" class="relative" style="height: 300px;">
+                            <div class="text-center py-12 text-gray-400">
+                                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                                <p class="text-xs">로딩 중...</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Family Stats -->
+                        <div class="mt-4 pt-4 border-t text-sm">
+                            <div class="flex justify-between mb-2">
+                                <span class="text-gray-600">등록된 가족</span>
+                                <span id="familyMemberCount" class="font-bold text-indigo-600">-</span>
+                            </div>
+                            <div class="flex justify-between mb-2">
+                                <span class="text-gray-600">인증 완료</span>
+                                <span id="verifiedMemberCount" class="font-bold text-green-600">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">인증 대기</span>
+                                <span id="pendingMemberCount" class="font-bold text-yellow-600">-</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="mt-4 pt-4 border-t flex gap-2">
+                            <button onclick="showAddMemberModal()" class="flex-1 px-3 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700">
+                                <i class="fas fa-plus mr-1"></i>가족 추가
+                            </button>
+                            <button onclick="viewFullFamilyTree()" class="flex-1 px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200">
+                                <i class="fas fa-sitemap mr-1"></i>전체 보기
+                            </button>
                         </div>
                     </div>
                 </div>

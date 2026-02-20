@@ -924,3 +924,183 @@ function addContactField() {
   `;
   container.insertBefore(newField, event.target.parentElement);
 }
+
+// ==================== Compact Family Network ====================
+
+// Load compact family network on page load
+document.addEventListener('DOMContentLoaded', () => {
+  loadCompactFamilyNetwork();
+});
+
+// Load and render compact family network
+async function loadCompactFamilyNetwork() {
+  const container = document.getElementById('compactFamilyNetwork');
+  
+  if (!container) return;
+  
+  try {
+    // Load D3.js if not already loaded
+    await loadD3Library();
+    
+    // Fetch family data
+    const response = await axios.get('/api/family/tree');
+    const relatives = response.data.relatives || [];
+    
+    // Update stats
+    updateFamilyStats(relatives);
+    
+    // Render compact network
+    renderCompactFamilyNetwork(relatives);
+    
+  } catch (error) {
+    console.error('Error loading compact family network:', error);
+    container.innerHTML = `
+      <div class="text-center py-12 text-gray-400">
+        <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+        <p class="text-xs">가족 정보를 불러올 수 없습니다</p>
+      </div>
+    `;
+  }
+}
+
+// Update family statistics
+function updateFamilyStats(relatives) {
+  const totalCount = relatives.length;
+  const verifiedCount = relatives.filter(r => r.is_verified === 1).length;
+  const pendingCount = totalCount - verifiedCount;
+  
+  const totalEl = document.getElementById('familyMemberCount');
+  const verifiedEl = document.getElementById('verifiedMemberCount');
+  const pendingEl = document.getElementById('pendingMemberCount');
+  
+  if (totalEl) totalEl.textContent = totalCount;
+  if (verifiedEl) verifiedEl.textContent = verifiedCount;
+  if (pendingEl) pendingEl.textContent = pendingCount;
+}
+
+// Render compact family network (simplified version)
+function renderCompactFamilyNetwork(relatives) {
+  const container = document.getElementById('compactFamilyNetwork');
+  
+  if (!relatives || relatives.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-12 text-gray-400">
+        <i class="fas fa-users text-3xl mb-2"></i>
+        <p class="text-xs">등록된 가족이 없습니다</p>
+      </div>
+    `;
+    return;
+  }
+  
+  // Clear container
+  container.innerHTML = '';
+  
+  const width = container.offsetWidth;
+  const height = 300;
+  
+  // Prepare data
+  const { nodes, links } = prepareNetworkData(relatives);
+  
+  // Create SVG
+  const svg = d3.select('#compactFamilyNetwork')
+    .append('svg')
+    .attr('width', width)
+    .attr('height', height)
+    .attr('viewBox', `0 0 ${width} ${height}`);
+  
+  const g = svg.append('g');
+  
+  // Force simulation (compact layout)
+  const simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d => d.id).distance(80))
+    .force('charge', d3.forceManyBody().strength(-200))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide().radius(25));
+  
+  // Draw links
+  const link = g.append('g')
+    .selectAll('line')
+    .data(links)
+    .enter()
+    .append('line')
+    .attr('stroke', d => getLinkColor(d.type))
+    .attr('stroke-width', 2)
+    .attr('stroke-dasharray', d => d.verified ? '0' : '3,3')
+    .attr('opacity', 0.5);
+  
+  // Draw nodes
+  const node = g.append('g')
+    .selectAll('g')
+    .data(nodes)
+    .enter()
+    .append('g')
+    .style('cursor', 'pointer')
+    .on('click', (event, d) => {
+      showFamilyMemberQuickView(d);
+    });
+  
+  // Node circles
+  node.append('circle')
+    .attr('r', 20)
+    .attr('fill', d => getNodeColor(d.relation))
+    .attr('stroke', d => d.is_verified ? '#10b981' : '#ef4444')
+    .attr('stroke-width', 2);
+  
+  // Node icons
+  node.append('text')
+    .attr('text-anchor', 'middle')
+    .attr('dy', '0.3em')
+    .attr('font-size', '14px')
+    .attr('fill', 'white')
+    .text(d => getRelationIcon(d.relation));
+  
+  // Node labels (name)
+  node.append('text')
+    .attr('text-anchor', 'middle')
+    .attr('dy', '32px')
+    .attr('font-size', '9px')
+    .attr('font-weight', 'bold')
+    .attr('fill', '#1f2937')
+    .text(d => {
+      const name = d.name_ko || d.name_en || '?';
+      return name.length > 6 ? name.substring(0, 5) + '...' : name;
+    });
+  
+  // Update positions on simulation tick
+  simulation.on('tick', () => {
+    link
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+    
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  });
+  
+  // Store simulation reference
+  window.compactFamilySimulation = simulation;
+}
+
+// Show family member quick view
+function showFamilyMemberQuickView(member) {
+  const relationLabel = getRelationLabel(member.relation);
+  const age = member.birth_date ? calculateAge(member.birth_date) : '-';
+  const verifiedIcon = member.is_verified 
+    ? '<i class="fas fa-check-circle text-green-500"></i>' 
+    : '<i class="fas fa-clock text-yellow-500"></i>';
+  
+  alert(`${verifiedIcon} ${member.name_ko || member.name_en}\n관계: ${relationLabel}\n나이: ${age}세`);
+}
+
+// Toggle to full family network view
+function toggleFamilyNetwork() {
+  viewFullFamilyTree();
+}
+
+// View full family tree (opens Family Tree tab)
+function viewFullFamilyTree() {
+  loadPage('family');
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
