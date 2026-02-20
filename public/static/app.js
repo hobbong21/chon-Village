@@ -1,5 +1,12 @@
-// Current user (for demo purposes)
-const currentUser = { id: 1, full_name: 'John Doe' };
+// Get current user from localStorage
+let currentUser = JSON.parse(localStorage.getItem('user'));
+
+// Check if user is logged in
+if (!currentUser) {
+  // Redirect to login page if not logged in
+  // For demo, use default user
+  currentUser = { id: 1, full_name: 'John Doe' };
+}
 
 // State management
 let currentPage = 'feed';
@@ -8,10 +15,23 @@ let posts = [];
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
+  updateUserProfile();
   loadPage('feed');
   setupEventListeners();
   loadSuggestedConnections();
 });
+
+// Update user profile in sidebar
+function updateUserProfile() {
+  if (currentUser) {
+    const profileCard = document.getElementById('profileCard');
+    if (profileCard) {
+      profileCard.querySelector('img').src = currentUser.profile_image || 'https://i.pravatar.cc/150?img=1';
+      profileCard.querySelector('h3').textContent = currentUser.full_name;
+      profileCard.querySelector('p').textContent = currentUser.headline || '전문가';
+    }
+  }
+}
 
 // Setup event listeners
 function setupEventListeners() {
@@ -23,6 +43,16 @@ function setupEventListeners() {
       loadPage(page);
     });
   });
+
+  // Logout button
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    });
+  }
 
   // Search input
   document.getElementById('searchInput').addEventListener('input', (e) => {
