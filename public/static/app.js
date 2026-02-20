@@ -75,6 +75,9 @@ async function loadPage(page) {
     case 'network':
       await loadNetwork();
       break;
+    case 'family':
+      await loadFamilyTree();
+      break;
     case 'profile':
       await loadProfile(currentUser.id);
       break;
@@ -507,4 +510,399 @@ function formatDate(dateString) {
   if (diffDays < 30) return `${Math.floor(diffDays / 7)}주 전`;
   if (diffDays < 365) return `${Math.floor(diffDays / 30)}개월 전`;
   return `${Math.floor(diffDays / 365)}년 전`;
+}
+
+// Load family tree page
+async function loadFamilyTree() {
+  const mainContent = document.getElementById('mainContent');
+  
+  mainContent.innerHTML = `
+    <div class="card">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">
+          <i class="fas fa-sitemap mr-2 text-blue-600"></i>
+          나의 가족 관계도
+        </h2>
+        <button onclick="showAddFamilyMemberModal()" class="btn-primary">
+          <i class="fas fa-plus mr-2"></i>가족 구성원 추가
+        </button>
+      </div>
+      
+      <div id="familyTreeContent" class="mt-6">
+        <div class="text-center py-12">
+          <i class="fas fa-spinner fa-spin text-4xl text-gray-400"></i>
+          <p class="text-gray-500 mt-4">가족 관계도를 불러오는 중...</p>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  try {
+    const response = await axios.get('/api/family/tree');
+    const { relatives } = response.data;
+    
+    renderFamilyTree(relatives);
+  } catch (error) {
+    console.error('Error loading family tree:', error);
+    document.getElementById('familyTreeContent').innerHTML = `
+      <div class="text-center py-12">
+        <i class="fas fa-exclamation-circle text-4xl text-red-500"></i>
+        <p class="text-red-600 mt-4">가족 관계도를 불러오는데 실패했습니다.</p>
+      </div>
+    `;
+  }
+}
+
+// Render family tree
+function renderFamilyTree(relatives) {
+  const container = document.getElementById('familyTreeContent');
+  
+  if (!relatives || relatives.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
+        <i class="fas fa-users text-6xl text-gray-300 mb-4"></i>
+        <p class="text-gray-600 text-lg font-medium mb-2">아직 등록된 가족 구성원이 없습니다</p>
+        <p class="text-gray-500 text-sm mb-6">아버지, 어머니부터 시작해보세요</p>
+        <button onclick="showAddFamilyMemberModal()" class="btn-primary">
+          <i class="fas fa-plus mr-2"></i>첫 가족 구성원 추가하기
+        </button>
+      </div>
+    `;
+    return;
+  }
+  
+  // Group relatives by type
+  const parents = relatives.filter(r => r.relationship_type === 'father' || r.relationship_type === 'mother');
+  const siblings = relatives.filter(r => r.relationship_type === 'sibling');
+  const spouse = relatives.find(r => r.relationship_type === 'spouse');
+  const children = relatives.filter(r => r.relationship_type === 'child');
+  
+  container.innerHTML = `
+    <!-- Parents -->
+    ${parents.length > 0 ? `
+      <div class="mb-8">
+        <h3 class="text-lg font-bold text-gray-700 mb-4 flex items-center">
+          <i class="fas fa-user-friends mr-2 text-green-600"></i>
+          부모님
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          ${parents.map(member => renderFamilyMember(member)).join('')}
+        </div>
+      </div>
+    ` : ''}
+    
+    <!-- Me -->
+    <div class="mb-8">
+      <h3 class="text-lg font-bold text-gray-700 mb-4 flex items-center">
+        <i class="fas fa-user mr-2 text-blue-600"></i>
+        나
+      </h3>
+      <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-6">
+        <div class="flex items-center space-x-4">
+          <img src="${currentUser.profile_image || 'https://i.pravatar.cc/150?img=1'}" 
+               class="w-16 h-16 rounded-full border-4 border-blue-400">
+          <div>
+            <h4 class="font-bold text-lg text-blue-800">${currentUser.full_name}</h4>
+            <p class="text-blue-600">${currentUser.headline || '전문가'}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Siblings -->
+    ${siblings.length > 0 ? `
+      <div class="mb-8">
+        <h3 class="text-lg font-bold text-gray-700 mb-4 flex items-center">
+          <i class="fas fa-users mr-2 text-purple-600"></i>
+          형제/자매
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          ${siblings.map(member => renderFamilyMember(member)).join('')}
+        </div>
+      </div>
+    ` : ''}
+    
+    <!-- Spouse -->
+    ${spouse ? `
+      <div class="mb-8">
+        <h3 class="text-lg font-bold text-gray-700 mb-4 flex items-center">
+          <i class="fas fa-heart mr-2 text-red-600"></i>
+          배우자
+        </h3>
+        <div class="max-w-md">
+          ${renderFamilyMember(spouse)}
+        </div>
+      </div>
+    ` : ''}
+    
+    <!-- Children -->
+    ${children.length > 0 ? `
+      <div class="mb-8">
+        <h3 class="text-lg font-bold text-gray-700 mb-4 flex items-center">
+          <i class="fas fa-child mr-2 text-orange-600"></i>
+          자녀
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          ${children.map(member => renderFamilyMember(member)).join('')}
+        </div>
+      </div>
+    ` : ''}
+  `;
+}
+
+// Render individual family member card
+function renderFamilyMember(member) {
+  const genderIcon = member.gender === 'male' ? 'fa-mars' : 'fa-venus';
+  const genderColor = member.gender === 'male' ? 'text-blue-500' : 'text-pink-500';
+  const verifiedBadge = member.is_verified ? 
+    '<span class="text-green-500 text-xs"><i class="fas fa-check-circle"></i> 인증됨</span>' : 
+    '<span class="text-gray-400 text-xs"><i class="fas fa-clock"></i> 미인증</span>';
+  
+  return `
+    <div class="bg-white border rounded-lg p-4 hover:shadow-md transition cursor-pointer"
+         onclick="viewFamilyMember(${member.id})">
+      <div class="flex items-start space-x-3">
+        <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+          <i class="fas fa-user text-gray-500 text-xl"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center space-x-2">
+            <h4 class="font-bold text-gray-800 truncate">
+              ${member.name_ko || member.name_en}
+            </h4>
+            <i class="fas ${genderIcon} ${genderColor} text-sm"></i>
+          </div>
+          ${member.name_en && member.name_ko ? `
+            <p class="text-xs text-gray-500">${member.name_en}</p>
+          ` : ''}
+          ${member.birth_date ? `
+            <p class="text-xs text-gray-500 mt-1">${member.birth_date}</p>
+          ` : ''}
+          <div class="mt-2">
+            ${verifiedBadge}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// View family member details
+async function viewFamilyMember(memberId) {
+  try {
+    const response = await axios.get(`/api/family/members/${memberId}`);
+    const { member, contacts, relationships } = response.data;
+    
+    // Show modal with member details
+    alert(`
+      이름: ${member.name_ko || member.name_en}
+      생년월일: ${member.birth_date || '미등록'}
+      성별: ${member.gender === 'male' ? '남성' : '여성'}
+      
+      연락처:
+      ${contacts.map(c => `${c.contact_type}: ${c.contact_value}`).join('\n')}
+    `);
+  } catch (error) {
+    console.error('Error loading member details:', error);
+    alert('가족 구성원 정보를 불러오는데 실패했습니다.');
+  }
+}
+
+// Show add family member modal
+function showAddFamilyMemberModal() {
+  const modal = document.createElement('div');
+  modal.id = 'addFamilyMemberModal';
+  modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+  
+  modal.innerHTML = `
+    <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
+        <h3 class="text-2xl font-bold text-gray-800">가족 구성원 추가</h3>
+        <button onclick="closeAddFamilyMemberModal()" class="text-gray-500 hover:text-gray-700">
+          <i class="fas fa-times text-2xl"></i>
+        </button>
+      </div>
+      
+      <form id="addFamilyMemberForm" class="p-6 space-y-4">
+        <!-- Relationship Type -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            관계 <span class="text-red-500">*</span>
+          </label>
+          <select id="relationshipType" required
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">선택하세요</option>
+            <option value="father">아버지</option>
+            <option value="mother">어머니</option>
+            <option value="sibling">형제/자매</option>
+            <option value="spouse">배우자</option>
+            <option value="child">자녀</option>
+          </select>
+        </div>
+        
+        <!-- Name (Korean) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            이름 (한글) <span class="text-red-500">*</span>
+          </label>
+          <input type="text" id="nameKo" required
+                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 placeholder="홍길동">
+        </div>
+        
+        <!-- Name (English) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            이름 (영문)
+          </label>
+          <input type="text" id="nameEn"
+                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 placeholder="Hong Gildong">
+        </div>
+        
+        <!-- Gender -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            성별 <span class="text-red-500">*</span>
+          </label>
+          <div class="flex space-x-4">
+            <label class="flex items-center cursor-pointer">
+              <input type="radio" name="gender" value="male" required class="mr-2">
+              <span>남성</span>
+            </label>
+            <label class="flex items-center cursor-pointer">
+              <input type="radio" name="gender" value="female" required class="mr-2">
+              <span>여성</span>
+            </label>
+          </div>
+        </div>
+        
+        <!-- Birth Date -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            생년월일
+          </label>
+          <input type="date" id="birthDate"
+                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        
+        <!-- Contact Info -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            연락처 <span class="text-red-500">*</span> (최소 1개 이상)
+          </label>
+          <div class="space-y-2">
+            <div class="flex space-x-2">
+              <select class="contact-type px-3 py-2 border border-gray-300 rounded-lg">
+                <option value="phone">전화번호</option>
+                <option value="email">이메일</option>
+                <option value="address">주소</option>
+              </select>
+              <input type="text" class="contact-value flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                     placeholder="연락처를 입력하세요">
+            </div>
+            <button type="button" onclick="addContactField()" 
+                    class="text-blue-600 hover:text-blue-700 text-sm">
+              <i class="fas fa-plus mr-1"></i>연락처 추가
+            </button>
+          </div>
+        </div>
+        
+        <!-- Submit -->
+        <div class="flex space-x-3">
+          <button type="submit" class="flex-1 bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 transition">
+            <i class="fas fa-plus mr-2"></i>추가하기
+          </button>
+          <button type="button" onclick="closeAddFamilyMemberModal()" 
+                  class="px-6 bg-gray-200 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-300 transition">
+            취소
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Handle form submission
+  document.getElementById('addFamilyMemberForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await submitAddFamilyMember();
+  });
+}
+
+// Close modal
+function closeAddFamilyMemberModal() {
+  const modal = document.getElementById('addFamilyMemberModal');
+  if (modal) {
+    modal.remove();
+  }
+}
+
+// Submit add family member
+async function submitAddFamilyMember() {
+  const relationshipType = document.getElementById('relationshipType').value;
+  const nameKo = document.getElementById('nameKo').value;
+  const nameEn = document.getElementById('nameEn').value;
+  const gender = document.querySelector('input[name="gender"]:checked').value;
+  const birthDate = document.getElementById('birthDate').value;
+  
+  // Collect contact info
+  const contactTypes = document.querySelectorAll('.contact-type');
+  const contactValues = document.querySelectorAll('.contact-value');
+  const contactInfo = [];
+  
+  for (let i = 0; i < contactTypes.length; i++) {
+    if (contactValues[i].value.trim()) {
+      contactInfo.push({
+        type: contactTypes[i].value,
+        value: contactValues[i].value.trim(),
+        is_primary: i === 0 ? 1 : 0
+      });
+    }
+  }
+  
+  if (contactInfo.length === 0) {
+    alert('최소 1개 이상의 연락처를 입력해주세요.');
+    return;
+  }
+  
+  try {
+    await axios.post('/api/family/members', {
+      name_ko: nameKo,
+      name_en: nameEn || null,
+      birth_date: birthDate || null,
+      gender,
+      relationship_type: relationshipType,
+      contact_info: contactInfo
+    });
+    
+    closeAddFamilyMemberModal();
+    alert('가족 구성원이 추가되었습니다!');
+    await loadFamilyTree();
+  } catch (error) {
+    console.error('Error adding family member:', error);
+    alert('가족 구성원 추가에 실패했습니다.');
+  }
+}
+
+// Add contact field
+function addContactField() {
+  const container = event.target.closest('.space-y-2');
+  const newField = document.createElement('div');
+  newField.className = 'flex space-x-2';
+  newField.innerHTML = `
+    <select class="contact-type px-3 py-2 border border-gray-300 rounded-lg">
+      <option value="phone">전화번호</option>
+      <option value="email">이메일</option>
+      <option value="address">주소</option>
+    </select>
+    <input type="text" class="contact-value flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+           placeholder="연락처를 입력하세요">
+    <button type="button" onclick="this.parentElement.remove()" 
+            class="px-3 text-red-600 hover:text-red-700">
+      <i class="fas fa-times"></i>
+    </button>
+  `;
+  container.insertBefore(newField, event.target.parentElement);
 }

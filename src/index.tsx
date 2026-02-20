@@ -335,6 +335,217 @@ app.post('/api/auth/register', async (c) => {
   })
 })
 
+// ==================== Family Tree Routes ====================
+
+// Get my family tree
+app.get('/api/family/tree', async (c) => {
+  const { DB } = c.env
+  const userId = 1 // TODO: Get from auth token
+  
+  // Get user's family member record
+  const myRecord = await DB.prepare(`
+    SELECT id FROM family_members WHERE user_id = ?
+  `).bind(userId).first()
+  
+  if (!myRecord) {
+    return c.json({ error: 'Family member record not found' }, 404)
+  }
+  
+  // Get all related family members
+  const { results: relatives } = await DB.prepare(`
+    SELECT DISTINCT
+      fm.id,
+      fm.name_ko,
+      fm.name_en,
+      fm.birth_date,
+      fm.gender,
+      fm.is_alive,
+      fm.is_registered,
+      fr.relationship_type,
+      fr.is_verified
+    FROM family_relationships fr
+    JOIN family_members fm ON fr.relative_id = fm.id
+    WHERE fr.person_id = ? AND fr.is_verified = 1
+  `).bind(myRecord.id).all()
+  
+  return c.json({ relatives })
+})
+
+// Add family member
+app.post('/api/family/members', async (c) => {
+  const { DB } = c.env
+  const userId = 1 // TODO: Get from auth token
+  const {
+    name_ko,
+    name_en,
+    birth_date,
+    gender,
+    relationship_type,
+    contact_info
+  } = await c.req.json()
+  
+  // Create family member
+  const memberResult = await DB.prepare(`
+    INSERT INTO family_members (name_ko, name_en, birth_date, gender, is_registered, created_by)
+    VALUES (?, ?, ?, ?, 0, ?)
+  `).bind(name_ko, name_en, birth_date, gender, userId).run()
+  
+  const memberId = memberResult.meta.last_row_id
+  
+  // Add contact info
+  if (contact_info && Array.isArray(contact_info)) {
+    for (const contact of contact_info) {
+      await DB.prepare(`
+        INSERT INTO contact_info (family_member_id, contact_type, contact_value, is_primary)
+        VALUES (?, ?, ?, ?)
+      `).bind(memberId, contact.type, contact.value, contact.is_primary || 0).run()
+    }
+  }
+  
+  // Get user's family member ID
+  const myRecord = await DB.prepare(`
+    SELECT id FROM family_members WHERE user_id = ?
+  `).bind(userId).first()
+  
+  // Create relationship
+  await DB.prepare(`
+    INSERT INTO family_relationships (person_id, relative_id, relationship_type, is_verified)
+    VALUES (?, ?, ?, 1)
+  `).bind(myRecord.id, memberId, relationship_type).run()
+  
+  // Create reverse relationship
+  const reverseType = getReversRelationship(relationship_type, gender)
+  await DB.prepare(`
+    INSERT INTO family_relationships (person_id, relative_id, relationship_type, is_verified)
+    VALUES (?, ?, ?, 1)
+  `).bind(memberId, myRecord.id, reverseType).run()
+  
+  return c.json({ success: true, member_id: memberId })
+})
+
+// Get family member details
+app.get('/api/family/members/:id', async (c) => {
+  const { DB } = c.env
+  const memberId = c.req.param('id')
+  
+  // Get member info
+  const member = await DB.prepare(`
+    SELECT 
+      fm.*,
+      fp.occupation,
+      fp.education,
+      fp.bio,
+      fp.profile_image,
+      fp.is_public
+    FROM family_members fm
+    LEFT JOIN family_profiles fp ON fm.id = fp.family_member_id
+    WHERE fm.id = ?
+  `).bind(memberId).first()
+  
+  if (!member) {
+    return c.json({ error: 'Member not found' }, 404)
+  }
+  
+  // Get contact info
+  const { results: contacts } = await DB.prepare(`
+    SELECT contact_type, contact_value, is_primary
+    FROM contact_info
+    WHERE family_member_id = ?
+  `).bind(memberId).all()
+  
+  // Get relationships
+  const { results: relationships } = await DB.prepare(`
+    SELECT 
+      fm.id,
+      fm.name_ko,
+      fm.name_en,
+      fr.relationship_type,
+      fr.is_verified
+    FROM family_relationships fr
+    JOIN family_members fm ON fr.relative_id = fm.id
+    WHERE fr.person_id = ?
+  `).bind(memberId).all()
+  
+  return c.json({
+    member,
+    contacts,
+    relationships
+  })
+})
+
+// Request relationship verification
+app.post('/api/family/verify/request', async (c) => {
+  const { DB } = c.env
+  const userId = 1 // TODO: Get from auth token
+  const { target_id, relationship_type } = await c.req.json()
+  
+  // Generate verification code
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase()
+  
+  // Create verification request
+  const result = await DB.prepare(`
+    INSERT INTO relationship_verifications (requester_id, target_id, relationship_type, verification_code, status)
+    VALUES (?, ?, ?, ?, 'pending')
+  `).bind(userId, target_id, relationship_type, code).run()
+  
+  // TODO: Send verification code via email/SMS
+  
+  return c.json({
+    success: true,
+    verification_id: result.meta.last_row_id,
+    code // In production, don't return code
+  })
+})
+
+// Accept relationship verification
+app.post('/api/family/verify/accept', async (c) => {
+  const { DB } = c.env
+  const { verification_id, code } = await c.req.json()
+  
+  // Verify code
+  const verification = await DB.prepare(`
+    SELECT * FROM relationship_verifications
+    WHERE id = ? AND verification_code = ? AND status = 'pending'
+  `).bind(verification_id, code).first()
+  
+  if (!verification) {
+    return c.json({ error: 'Invalid verification code or request' }, 400)
+  }
+  
+  // Update verification status
+  await DB.prepare(`
+    UPDATE relationship_verifications
+    SET status = 'accepted', responded_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).bind(verification_id).run()
+  
+  // Update relationship to verified
+  await DB.prepare(`
+    UPDATE family_relationships
+    SET is_verified = 1
+    WHERE (person_id = ? AND relative_id = ?) OR (person_id = ? AND relative_id = ?)
+  `).bind(
+    verification.requester_id,
+    verification.target_id,
+    verification.target_id,
+    verification.requester_id
+  ).run()
+  
+  return c.json({ success: true })
+})
+
+// Helper function to get reverse relationship
+function getReversRelationship(type: string, gender: string): string {
+  const reverseMap: Record<string, string> = {
+    'father': gender === 'male' ? 'child' : 'child',
+    'mother': gender === 'male' ? 'child' : 'child',
+    'child': 'parent',
+    'sibling': 'sibling',
+    'spouse': 'spouse'
+  }
+  return reverseMap[type] || 'relative'
+}
+
 // ==================== Frontend Routes ====================
 
 // New Enhanced Login page
@@ -790,6 +1001,9 @@ app.get('/', (c) => {
                             </a>
                             <a href="#" class="nav-link text-gray-700 hover:text-blue-600" data-page="network">
                                 <i class="fas fa-users mr-1"></i>네트워크
+                            </a>
+                            <a href="#" class="nav-link text-gray-700 hover:text-blue-600" data-page="family">
+                                <i class="fas fa-sitemap mr-1"></i>가족관계도
                             </a>
                             <a href="#" class="nav-link text-gray-700 hover:text-blue-600" data-page="profile">
                                 <i class="fas fa-user mr-1"></i>프로필
