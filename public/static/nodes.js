@@ -2,19 +2,21 @@
 // 노드 관리 및 네트워크 확장 시스템
 
 // State
-let currentUser = null;
 let allNodes = [];
 let myNodes = [];
 let selectedNode = null;
 
-// Initialize on load
-document.addEventListener('DOMContentLoaded', () => {
-  currentUser = JSON.parse(localStorage.getItem('user')) || {
+// Get current user from app.js global variable or localStorage
+function getCurrentUser() {
+  if (typeof currentUser !== 'undefined' && currentUser) {
+    return currentUser;
+  }
+  return JSON.parse(localStorage.getItem('user')) || {
     id: 1,
     full_name: 'John Doe',
     email: 'john.doe@example.com'
   };
-});
+}
 
 // Load nodes page
 async function loadNodesPage() {
