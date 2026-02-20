@@ -75,6 +75,9 @@ async function loadPage(page) {
     case 'network':
       await loadNetwork();
       break;
+    case 'nodes':
+      await loadNodesPage();
+      break;
     case 'family':
       await loadKoreanFamilyTree();
       break;

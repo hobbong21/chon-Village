@@ -1483,6 +1483,27 @@ app.get('/', (c) => {
           .card { @apply bg-white rounded-lg shadow-md p-6 mb-4; }
           .btn-primary { @apply bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition; }
           .btn-secondary { @apply bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition; }
+          
+          .tab-button {
+            @apply px-4 py-2 text-gray-600 hover:text-blue-600 transition border-b-2 border-transparent;
+          }
+          .tab-button.active {
+            @apply text-blue-600 border-blue-600 font-semibold;
+          }
+          
+          .modal {
+            @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4;
+          }
+          .modal-content {
+            @apply bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-screen overflow-y-auto;
+          }
+          
+          .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
         </style>
     </head>
     <body class="bg-gray-100">
@@ -1500,6 +1521,9 @@ app.get('/', (c) => {
                             </a>
                             <a href="#" class="nav-link text-gray-700 hover:text-blue-600" data-page="network">
                                 <i class="fas fa-users mr-1"></i>네트워크
+                            </a>
+                            <a href="#" class="nav-link text-gray-700 hover:text-blue-600" data-page="nodes">
+                                <i class="fas fa-sitemap mr-1"></i>노드
                             </a>
                             <a href="#" class="nav-link text-gray-700 hover:text-blue-600" data-page="profile">
                                 <i class="fas fa-user mr-1"></i>프로필
@@ -1611,6 +1635,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/korean-family-tree.js"></script>
         <script src="/static/family-network.js"></script>
+        <script src="/static/nodes.js"></script>
         <script src="/static/app.js"></script>
     </body>
     </html>
