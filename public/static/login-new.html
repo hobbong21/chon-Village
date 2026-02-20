@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인 - ProNetwork</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+      body {
+        background: #f5f5f5;
+      }
+      .benefit-item {
+        transition: transform 0.3s ease;
+      }
+      .benefit-item:hover {
+        transform: translateY(-5px);
+      }
+      .preview-screen {
+        border: 3px solid #e5e7eb;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-network-wired text-3xl text-blue-600"></i>
+                <h1 class="text-2xl font-bold text-gray-800">ProNetwork</h1>
+            </div>
+            <nav class="hidden md:flex space-x-6">
+                <a href="/" class="text-gray-600 hover:text-blue-600">홈</a>
+                <a href="#" class="text-gray-600 hover:text-blue-600">서비스 소개</a>
+                <a href="#" class="text-gray-600 hover:text-blue-600">고객센터</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="max-w-7xl mx-auto px-4 py-12">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <!-- Left: Login Form -->
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">로그인</h2>
+                <p class="text-gray-600 mb-6">전문가 네트워킹을 시작하세요</p>
+
+                <!-- Login Form -->
+                <form id="loginForm" class="space-y-4">
+                    <!-- Email -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            이메일
+                        </label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            required
+                            placeholder="example@email.com"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+
+                    <!-- Password -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            비밀번호
+                        </label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            required
+                            placeholder="비밀번호를 입력하세요"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+
+                    <!-- Remember & Find -->
+                    <div class="flex items-center justify-between text-sm">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <span class="ml-2 text-gray-700">로그인 상태 유지</span>
+                        </label>
+                        <div class="flex space-x-2">
+                            <a href="#" class="text-gray-600 hover:text-blue-600">아이디 찾기</a>
+                            <span class="text-gray-300">|</span>
+                            <a href="#" class="text-gray-600 hover:text-blue-600">비밀번호 찾기</a>
+                        </div>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div id="errorMessage" class="hidden bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        <span id="errorText"></span>
+                    </div>
+
+                    <!-- Login Button -->
+                    <button 
+                        type="submit" 
+                        class="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 transition"
+                    >
+                        로그인
+                    </button>
+                </form>
+
+                <!-- Divider -->
+                <div class="flex items-center my-6">
+                    <div class="flex-1 border-t border-gray-300"></div>
+                    <span class="px-4 text-sm text-gray-500">또는</span>
+                    <div class="flex-1 border-t border-gray-300"></div>
+                </div>
+
+                <!-- Social Login -->
+                <div class="space-y-3">
+                    <button class="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                        <i class="fab fa-google text-red-500 text-xl mr-3"></i>
+                        <span class="font-medium text-gray-700">Google로 계속하기</span>
+                    </button>
+                    <button class="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                        <i class="fab fa-facebook text-blue-600 text-xl mr-3"></i>
+                        <span class="font-medium text-gray-700">Facebook으로 계속하기</span>
+                    </button>
+                </div>
+
+                <!-- Register Link -->
+                <div class="text-center mt-6 p-4 bg-gray-50 rounded-lg">
+                    <p class="text-gray-700">
+                        아직 회원이 아니신가요?
+                        <a href="/register" class="text-blue-600 hover:text-blue-700 font-semibold ml-2">
+                            회원가입 →
+                        </a>
+                    </p>
+                </div>
+
+                <!-- Terms -->
+                <div class="mt-6 text-xs text-gray-500 text-center">
+                    <p>
+                        로그인 시 ProNetwork의 
+                        <a href="#" onclick="openTermsModal(event)" class="text-blue-600 hover:underline">이용약관</a> 및 
+                        <a href="#" onclick="openPrivacyModal(event)" class="text-blue-600 hover:underline">개인정보 처리방침</a>에 
+                        동의하는 것으로 간주합니다.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right: Benefits & Preview -->
+            <div class="space-y-8">
+                <!-- Member Benefits -->
+                <div class="bg-white rounded-lg shadow-lg p-8">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6">
+                        <i class="fas fa-gift text-blue-600 mr-2"></i>
+                        회원 혜택
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="benefit-item flex items-start space-x-4 p-4 bg-blue-50 rounded-lg">
+                            <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-users text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-800 mb-1">무제한 네트워킹</h4>
+                                <p class="text-sm text-gray-600">전 세계 전문가들과 자유롭게 연결하고 소통하세요</p>
+                            </div>
+                        </div>
+
+                        <div class="benefit-item flex items-start space-x-4 p-4 bg-green-50 rounded-lg">
+                            <div class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-briefcase text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-800 mb-1">커리어 성장 도구</h4>
+                                <p class="text-sm text-gray-600">프로필 관리, 경력 추적, 스킬 인증 등 다양한 기능 제공</p>
+                            </div>
+                        </div>
+
+                        <div class="benefit-item flex items-start space-x-4 p-4 bg-purple-50 rounded-lg">
+                            <div class="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-bell text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-800 mb-1">맞춤형 알림</h4>
+                                <p class="text-sm text-gray-600">관심 분야의 최신 소식과 기회를 실시간으로 받아보세요</p>
+                            </div>
+                        </div>
+
+                        <div class="benefit-item flex items-start space-x-4 p-4 bg-orange-50 rounded-lg">
+                            <div class="w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-chart-line text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-800 mb-1">인사이트 분석</h4>
+                                <p class="text-sm text-gray-600">프로필 조회수, 연결 성장률 등 상세한 통계 제공</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview -->
+                <div class="bg-white rounded-lg shadow-lg p-8">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6">
+                        <i class="fas fa-eye text-blue-600 mr-2"></i>
+                        서비스 미리보기
+                    </h3>
+                    <div class="preview-screen">
+                        <img 
+                            src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=600&fit=crop" 
+                            alt="ProNetwork 미리보기"
+                            class="w-full h-auto"
+                        >
+                    </div>
+                    <div class="mt-4 space-y-2">
+                        <div class="flex items-center text-sm text-gray-600">
+                            <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                            <span>직관적인 사용자 인터페이스</span>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-600">
+                            <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                            <span>모바일 완벽 지원</span>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-600">
+                            <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                            <span>실시간 알림 및 메시징</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white mt-16">
+        <div class="max-w-7xl mx-auto px-4 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h4 class="font-bold mb-4">ProNetwork</h4>
+                    <p class="text-sm text-gray-400">
+                        전문가들을 위한<br>
+                        최고의 네트워킹 플랫폼
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4">서비스</h4>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><a href="#" class="hover:text-white">프로필 관리</a></li>
+                        <li><a href="#" class="hover:text-white">네트워킹</a></li>
+                        <li><a href="#" class="hover:text-white">채용 정보</a></li>
+                        <li><a href="#" class="hover:text-white">콘텐츠 피드</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4">고객지원</h4>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><a href="#" class="hover:text-white">FAQ</a></li>
+                        <li><a href="#" class="hover:text-white">문의하기</a></li>
+                        <li><a href="#" class="hover:text-white">이용 가이드</a></li>
+                        <li><a href="#" class="hover:text-white">공지사항</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4">법적 고지</h4>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><a href="#" onclick="openTermsModal(event)" class="hover:text-white">이용약관</a></li>
+                        <li><a href="#" onclick="openPrivacyModal(event)" class="hover:text-white">개인정보 처리방침</a></li>
+                        <li><a href="#" class="hover:text-white">쿠키 정책</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-400">
+                <p>&copy; 2026 ProNetwork. All rights reserved.</p>
+                <p class="mt-2">사업자등록번호: 123-45-67890 | 대표이사: 홍길동 | 고객센터: 1588-0000</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Terms Modal -->
+    <div id="termsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-3xl w-full max-h-[80vh] overflow-hidden">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-2xl font-bold text-gray-800">이용약관</h3>
+                <button onclick="closeTermsModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[60vh]">
+                <div class="prose max-w-none">
+                    <h4 class="font-bold text-lg mb-2">제1조 (목적)</h4>
+                    <p class="text-sm text-gray-700 mb-4">
+                        이 약관은 ProNetwork(이하 "회사"라 합니다)이 제공하는 네트워킹 서비스(이하 "서비스"라 합니다)의 
+                        이용과 관련하여 회사와 회원 간의 권리, 의무 및 책임사항, 기타 필요한 사항을 규정함을 목적으로 합니다.
+                    </p>
+
+                    <h4 class="font-bold text-lg mb-2">제2조 (용어의 정의)</h4>
+                    <p class="text-sm text-gray-700 mb-4">
+                        ① "회원"이라 함은 회사와 서비스 이용계약을 체결하고 회사가 제공하는 서비스를 이용하는 자를 말합니다.<br>
+                        ② "아이디(ID)"라 함은 회원의 식별과 서비스 이용을 위하여 회원이 정하고 회사가 승인하는 문자와 숫자의 조합을 말합니다.<br>
+                        ③ "비밀번호"라 함은 회원이 부여받은 아이디와 일치된 회원임을 확인하고 회원 자신의 비밀을 보호하기 위하여 
+                        회원이 정한 문자와 숫자의 조합을 말합니다.
+                    </p>
+
+                    <h4 class="font-bold text-lg mb-2">제3조 (약관의 효력 및 변경)</h4>
+                    <p class="text-sm text-gray-700 mb-4">
+                        ① 이 약관은 서비스를 이용하고자 하는 모든 회원에 대하여 그 효력을 발생합니다.<br>
+                        ② 회사는 합리적인 사유가 발생할 경우 이 약관을 변경할 수 있으며, 약관이 변경된 경우에는 
+                        지체 없이 이를 공지합니다.
+                    </p>
+
+                    <h4 class="font-bold text-lg mb-2">제4조 (회원가입)</h4>
+                    <p class="text-sm text-gray-700 mb-4">
+                        ① 회원으로 가입하여 서비스를 이용하고자 하는 이용자는 회사에서 요청하는 제반정보를 제공하여야 합니다.<br>
+                        ② 모든 회원은 반드시 본인의 실명으로 회원가입을 하여야만 서비스를 이용할 수 있으며, 
+                        실명으로 등록하지 않은 사용자는 일체의 권리를 주장할 수 없습니다.
+                    </p>
+
+                    <h4 class="font-bold text-lg mb-2">제5조 (서비스의 제공 및 변경)</h4>
+                    <p class="text-sm text-gray-700 mb-4">
+                        회사는 다음과 같은 업무를 수행합니다:<br>
+                        1. 전문가 네트워킹 서비스 제공<br>
+                        2. 프로필 관리 및 경력 정보 관리<br>
+                        3. 채용 정보 제공<br>
+                        4. 기타 회사가 정하는 업무
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Privacy Modal -->
+    <div id="privacyModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-3xl w-full max-h-[80vh] overflow-hidden">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-2xl font-bold text-gray-800">개인정보 처리방침</h3>
+                <button onclick="closePrivacyModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[60vh]">
+                <div class="prose max-w-none">
+                    <h4 class="font-bold text-lg mb-2">1. 개인정보의 수집 및 이용목적</h4>
+                    <p class="text-sm text-gray-700 mb-4">
+                        회사는 다음의 목적을 위해 개인정보를 처리합니다. 처리한 개인정보는 다음의 목적 이외의 용도로는 사용되지 않으며 
+                        이용 목적이 변경될 시에는 사전동의를 구할 예정입니다.<br><br>
+                        가. 회원 가입 및 관리: 회원 가입의사 확인, 회원제 서비스 제공에 따른 본인 식별·인증, 회원자격 유지·관리<br>
+                        나. 서비스 제공: 콘텐츠 제공, 맞춤 서비스 제공, 본인인증<br>
+                        다. 마케팅 및 광고: 신규 서비스 개발 및 맞춤 서비스 제공, 이벤트 및 광고성 정보 제공
+                    </p>
+
+                    <h4 class="font-bold text-lg mb-2">2. 수집하는 개인정보의 항목</h4>
+                    <p class="text-sm text-gray-700 mb-4">
+                        회사는 회원가입, 상담, 서비스 신청 등을 위해 아래와 같은 개인정보를 수집하고 있습니다.<br><br>
+                        ● 필수항목: 이름, 이메일 주소, 비밀번호<br>
+                        ● 선택항목: 프로필 사진, 전화번호, 회사명, 직책, 학력, 경력사항<br>
+                        ● 자동 수집 항목: IP주소, 쿠키, 서비스 이용 기록, 방문 기록
+                    </p>
+
+                    <h4 class="font-bold text-lg mb-2">3. 개인정보의 보유 및 이용기간</h4>
+                    <p class="text-sm text-gray-700 mb-4">
+                        회사는 법령에 따른 개인정보 보유·이용기간 또는 정보주체로부터 개인정보를 수집 시에 동의받은 개인정보 
+                        보유·이용기간 내에서 개인정보를 처리·보유합니다.<br><br>
+                        ● 회원 탈퇴 시까지 (단, 관계 법령 위반에 따른 수사·조사 등이 진행 중인 경우에는 해당 수사·조사 종료 시까지)
+                    </p>
+
+                    <h4 class="font-bold text-lg mb-2">4. 개인정보의 파기절차 및 방법</h4>
+                    <p class="text-sm text-gray-700 mb-4">
+                        회사는 원칙적으로 개인정보 처리목적이 달성된 경우에는 지체 없이 해당 개인정보를 파기합니다. 
+                        파기의 절차, 기한 및 방법은 다음과 같습니다.<br><br>
+                        ● 파기절차: 이용자가 입력한 정보는 목적 달성 후 별도의 DB에 옮겨져 내부 방침 및 기타 관련 법령에 따라 
+                        일정기간 저장된 후 혹은 즉시 파기됩니다.<br>
+                        ● 파기방법: 전자적 파일 형태의 정보는 기록을 재생할 수 없는 기술적 방법을 사용합니다.
+                    </p>
+
+                    <h4 class="font-bold text-lg mb-2">5. 정보주체의 권리·의무 및 행사방법</h4>
+                    <p class="text-sm text-gray-700 mb-4">
+                        정보주체는 회사에 대해 언제든지 다음 각 호의 개인정보 보호 관련 권리를 행사할 수 있습니다.<br><br>
+                        1. 개인정보 열람요구<br>
+                        2. 오류 등이 있을 경우 정정 요구<br>
+                        3. 삭제요구<br>
+                        4. 처리정지 요구
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    <script src="/static/login.js"></script>
+    <script>
+        function openTermsModal(e) {
+            e.preventDefault();
+            document.getElementById('termsModal').classList.remove('hidden');
+        }
+        
+        function closeTermsModal() {
+            document.getElementById('termsModal').classList.add('hidden');
+        }
+        
+        function openPrivacyModal(e) {
+            e.preventDefault();
+            document.getElementById('privacyModal').classList.remove('hidden');
+        }
+        
+        function closePrivacyModal() {
+            document.getElementById('privacyModal').classList.add('hidden');
+        }
+        
+        // Close modal when clicking outside
+        document.getElementById('termsModal').addEventListener('click', function(e) {
+            if (e.target === this) closeTermsModal();
+        });
+        
+        document.getElementById('privacyModal').addEventListener('click', function(e) {
+            if (e.target === this) closePrivacyModal();
+        });
+    </script>
+</body>
+</html>

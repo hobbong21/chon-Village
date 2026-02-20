@@ -337,6 +337,11 @@ app.post('/api/auth/register', async (c) => {
 
 // ==================== Frontend Routes ====================
 
+// New Enhanced Login page
+app.get('/login-new', (c) => {
+  return c.redirect('/static/login-new.html')
+})
+
 // Login page
 app.get('/login', (c) => {
   return c.html(`
