@@ -99,16 +99,34 @@ async function loadFeed() {
   
   // Post creation form
   mainContent.innerHTML = `
-    <div class="card">
-      <textarea id="postContent" rows="3" 
-                class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="무슨 생각을 하고 계신가요?"></textarea>
-      <div class="flex justify-end mt-3">
-        <button onclick="createPost()" class="btn-primary">
-          <i class="fas fa-paper-plane mr-2"></i>게시
-        </button>
+    <div class="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4">
+      <div class="flex items-start space-x-3">
+        <img src="${currentUser.profile_image || 'https://via.placeholder.com/40'}" 
+             alt="${currentUser.name}" 
+             class="w-10 h-10 sm:w-12 sm:h-12 rounded-full">
+        <div class="flex-1">
+          <textarea id="postContent" rows="3" 
+                    class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    placeholder="무슨 생각을 하고 계신가요? (#해시태그 사용 가능)"></textarea>
+          <div class="flex items-center justify-between mt-3">
+            <div class="text-xs text-gray-500">
+              <i class="fas fa-hashtag"></i> 해시태그를 사용해보세요! 예: #개발 #코딩
+            </div>
+            <button onclick="createPost()" class="btn-primary">
+              <i class="fas fa-paper-plane mr-2"></i>게시
+            </button>
+          </div>
+        </div>
       </div>
     </div>
+    
+    <!-- Trending Hashtags Button -->
+    <div class="mb-4">
+      <button onclick="loadTrendingHashtags()" class="text-blue-600 hover:underline text-sm">
+        <i class="fas fa-fire"></i> 트렌딩 해시태그 보기
+      </button>
+    </div>
+    
     <div id="feedPosts"></div>
   `;
   
@@ -126,36 +144,10 @@ async function loadFeed() {
 function renderPosts(postsData) {
   const feedPosts = document.getElementById('feedPosts');
   
-  feedPosts.innerHTML = postsData.map(post => `
-    <div class="card">
-      <div class="flex items-start mb-4">
-        <img src="${post.profile_image}" class="w-12 h-12 rounded-full mr-3">
-        <div class="flex-1">
-          <h4 class="font-bold">${post.full_name}</h4>
-          <p class="text-sm text-gray-600">${post.headline}</p>
-          <p class="text-xs text-gray-500">${formatDate(post.created_at)}</p>
-        </div>
-      </div>
-      
-      <p class="mb-4 whitespace-pre-wrap">${post.content}</p>
-      
-      ${post.image_url ? `<img src="${post.image_url}" class="w-full rounded-lg mb-4">` : ''}
-      
-      <div class="flex items-center space-x-6 pt-4 border-t text-gray-600">
-        <button onclick="likePost(${post.id})" class="hover:text-blue-600 transition">
-          <i class="fas fa-thumbs-up mr-1"></i>${post.likes_count} 좋아요
-        </button>
-        <button onclick="loadComments(${post.id})" class="hover:text-blue-600 transition">
-          <i class="fas fa-comment mr-1"></i>${post.comments_count} 댓글
-        </button>
-        <button class="hover:text-blue-600 transition">
-          <i class="fas fa-share mr-1"></i>공유
-        </button>
-      </div>
-      
-      <div id="comments-${post.id}" class="mt-4 hidden"></div>
-    </div>
-  `).join('');
+  feedPosts.innerHTML = postsData.map(post => renderPost(post)).join('');
+  
+  // Load share counts for all posts
+  loadShareCounts();
 }
 
 // Create new post

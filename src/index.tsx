@@ -240,7 +240,95 @@ app.post('/api/posts', async (c) => {
     VALUES (?, ?, ?)
   `).bind(user_id, content, image_url || null).run()
   
-  return c.json({ id: result.meta.last_row_id, user_id, content, image_url })
+  const postId = result.meta.last_row_id
+  
+  // Extract hashtags from content
+  const hashtagRegex = /#[\w가-힣]+/g
+  const hashtags = content.match(hashtagRegex) || []
+  
+  for (const tag of hashtags) {
+    const cleanTag = tag.substring(1) // Remove #
+    
+    // Insert or update hashtag
+    await DB.prepare(`
+      INSERT INTO hashtags (tag, usage_count) 
+      VALUES (?, 1)
+      ON CONFLICT(tag) DO UPDATE SET usage_count = usage_count + 1
+    `).bind(cleanTag).run()
+    
+    // Get hashtag id
+    const { results } = await DB.prepare(`
+      SELECT id FROM hashtags WHERE tag = ?
+    `).bind(cleanTag).all()
+    
+    if (results.length > 0) {
+      // Link post to hashtag
+      await DB.prepare(`
+        INSERT INTO post_hashtags (post_id, hashtag_id)
+        VALUES (?, ?)
+      `).bind(postId, results[0].id).run()
+    }
+  }
+  
+  return c.json({ id: postId, user_id, content, image_url, hashtags })
+})
+
+// Update post
+app.put('/api/posts/:id', async (c) => {
+  const { DB } = c.env
+  const postId = c.req.param('id')
+  const { content, image_url } = await c.req.json()
+  
+  await DB.prepare(`
+    UPDATE posts SET content = ?, image_url = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).bind(content, image_url || null, postId).run()
+  
+  // Remove old hashtag associations
+  await DB.prepare(`DELETE FROM post_hashtags WHERE post_id = ?`).bind(postId).run()
+  
+  // Extract new hashtags from content
+  const hashtagRegex = /#[\w가-힣]+/g
+  const hashtags = content.match(hashtagRegex) || []
+  
+  for (const tag of hashtags) {
+    const cleanTag = tag.substring(1) // Remove #
+    
+    // Insert or update hashtag
+    await DB.prepare(`
+      INSERT INTO hashtags (tag, usage_count) 
+      VALUES (?, 1)
+      ON CONFLICT(tag) DO UPDATE SET usage_count = usage_count + 1
+    `).bind(cleanTag).run()
+    
+    // Get hashtag id
+    const { results } = await DB.prepare(`
+      SELECT id FROM hashtags WHERE tag = ?
+    `).bind(cleanTag).all()
+    
+    if (results.length > 0) {
+      // Link post to hashtag
+      await DB.prepare(`
+        INSERT INTO post_hashtags (post_id, hashtag_id)
+        VALUES (?, ?)
+      `).bind(postId, results[0].id).run()
+    }
+  }
+  
+  return c.json({ success: true, message: 'Post updated', hashtags })
+})
+
+// Delete post
+app.delete('/api/posts/:id', async (c) => {
+  const { DB } = c.env
+  const postId = c.req.param('id')
+  
+  // Delete related data first
+  await DB.prepare(`DELETE FROM post_likes WHERE post_id = ?`).bind(postId).run()
+  await DB.prepare(`DELETE FROM comments WHERE post_id = ?`).bind(postId).run()
+  await DB.prepare(`DELETE FROM posts WHERE id = ?`).bind(postId).run()
+  
+  return c.json({ success: true, message: 'Post deleted' })
 })
 
 // Add skill
@@ -264,6 +352,109 @@ app.delete('/api/skills/:id', async (c) => {
   await DB.prepare(`DELETE FROM skills WHERE id = ?`).bind(skillId).run()
   
   return c.json({ success: true, message: 'Skill deleted' })
+})
+
+// Hashtag APIs
+
+// Get trending hashtags
+app.get('/api/hashtags/trending', async (c) => {
+  const { DB } = c.env
+  const limit = c.req.query('limit') || '10'
+  
+  const { results } = await DB.prepare(`
+    SELECT id, tag, usage_count
+    FROM hashtags
+    ORDER BY usage_count DESC
+    LIMIT ?
+  `).bind(limit).all()
+  
+  return c.json({ hashtags: results })
+})
+
+// Search hashtags
+app.get('/api/hashtags/search', async (c) => {
+  const { DB } = c.env
+  const query = c.req.query('q') || ''
+  
+  const { results } = await DB.prepare(`
+    SELECT id, tag, usage_count
+    FROM hashtags
+    WHERE tag LIKE ?
+    ORDER BY usage_count DESC
+    LIMIT 20
+  `).bind(`%${query}%`).all()
+  
+  return c.json({ hashtags: results })
+})
+
+// Get posts by hashtag
+app.get('/api/hashtags/:tag/posts', async (c) => {
+  const { DB } = c.env
+  const tag = c.req.param('tag')
+  
+  const { results } = await DB.prepare(`
+    SELECT 
+      p.*,
+      u.full_name,
+      u.headline,
+      u.profile_image
+    FROM posts p
+    JOIN post_hashtags ph ON p.id = ph.post_id
+    JOIN hashtags h ON ph.hashtag_id = h.id
+    JOIN users u ON p.user_id = u.id
+    WHERE h.tag = ?
+    ORDER BY p.created_at DESC
+    LIMIT 50
+  `).bind(tag).all()
+  
+  return c.json({ posts: results })
+})
+
+// Share post
+app.post('/api/posts/:id/share', async (c) => {
+  const { DB } = c.env
+  const postId = c.req.param('id')
+  const { user_id } = await c.req.json()
+  
+  try {
+    await DB.prepare(`
+      INSERT INTO post_shares (post_id, user_id)
+      VALUES (?, ?)
+    `).bind(postId, user_id).run()
+    
+    return c.json({ success: true, message: 'Post shared' })
+  } catch (error) {
+    return c.json({ error: 'Failed to share post' }, 400)
+  }
+})
+
+// Get post share count
+app.get('/api/posts/:id/shares', async (c) => {
+  const { DB } = c.env
+  const postId = c.req.param('id')
+  
+  const { results } = await DB.prepare(`
+    SELECT COUNT(*) as share_count
+    FROM post_shares
+    WHERE post_id = ?
+  `).bind(postId).all()
+  
+  return c.json({ share_count: results[0]?.share_count || 0 })
+})
+
+// Get post hashtags
+app.get('/api/posts/:id/hashtags', async (c) => {
+  const { DB } = c.env
+  const postId = c.req.param('id')
+  
+  const { results } = await DB.prepare(`
+    SELECT h.tag
+    FROM hashtags h
+    JOIN post_hashtags ph ON h.id = ph.hashtag_id
+    WHERE ph.post_id = ?
+  `).bind(postId).all()
+  
+  return c.json({ hashtags: results.map(r => r.tag) })
 })
 
 // Like a post
@@ -2234,6 +2425,7 @@ app.get('/', (c) => {
         <script src="/static/profile-edit.js"></script>
         <script src="/static/family-advanced.js"></script>
         <script src="/static/notifications.js"></script>
+        <script src="/static/posts.js"></script>
         <script src="/static/app.js"></script>
     </body>
     </html>
