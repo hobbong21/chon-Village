@@ -2003,8 +2003,9 @@ app.get('/', (c) => {
                         </div>
                         
                         <!-- Notifications -->
-                        <button class="p-2 text-gray-700 hover:text-blue-600 transition touch-target">
+                        <button onclick="showNotificationCenter()" class="p-2 text-gray-700 hover:text-blue-600 transition touch-target relative">
                             <i class="fas fa-bell text-lg"></i>
+                            <span class="notification-badge hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">0</span>
                         </button>
                         
                         <!-- Hamburger Menu (Mobile) -->
@@ -2232,6 +2233,7 @@ app.get('/', (c) => {
         <script src="/static/nodes.js"></script>
         <script src="/static/profile-edit.js"></script>
         <script src="/static/family-advanced.js"></script>
+        <script src="/static/notifications.js"></script>
         <script src="/static/app.js"></script>
     </body>
     </html>
@@ -2543,6 +2545,210 @@ app.get('/api/family/my-invitations', async (c) => {
   `).bind(member.id).all()
   
   return c.json({ invitations: results })
+})
+
+// ============================================
+// Notifications APIs
+// ============================================
+
+// Get user notifications
+app.get('/api/notifications', async (c) => {
+  const { DB } = c.env
+  const userId = 1 // TODO: Get from auth
+  
+  const { results } = await DB.prepare(`
+    SELECT * FROM notifications
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+    LIMIT 50
+  `).bind(userId).all()
+  
+  return c.json({ notifications: results })
+})
+
+// Get unread count
+app.get('/api/notifications/unread-count', async (c) => {
+  const { DB } = c.env
+  const userId = 1 // TODO: Get from auth
+  
+  const result = await DB.prepare(`
+    SELECT COUNT(*) as count FROM notifications
+    WHERE user_id = ? AND is_read = 0
+  `).bind(userId).first()
+  
+  return c.json({ count: result.count })
+})
+
+// Mark notification as read
+app.put('/api/notifications/:id/read', async (c) => {
+  const { DB } = c.env
+  const notificationId = c.req.param('id')
+  
+  await DB.prepare(`
+    UPDATE notifications SET is_read = 1 WHERE id = ?
+  `).bind(notificationId).run()
+  
+  return c.json({ success: true })
+})
+
+// Mark all as read
+app.put('/api/notifications/read-all', async (c) => {
+  const { DB } = c.env
+  const userId = 1 // TODO: Get from auth
+  
+  await DB.prepare(`
+    UPDATE notifications SET is_read = 1 WHERE user_id = ?
+  `).bind(userId).run()
+  
+  return c.json({ success: true })
+})
+
+// Create notification (internal use)
+app.post('/api/notifications', async (c) => {
+  const { DB } = c.env
+  const { user_id, type, title, message, related_id, related_type } = await c.req.json()
+  
+  const result = await DB.prepare(`
+    INSERT INTO notifications (user_id, type, title, message, related_id, related_type)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).bind(user_id, type, title, message, related_id || null, related_type || null).run()
+  
+  return c.json({ success: true, notification_id: result.meta.last_row_id })
+})
+
+// ============================================
+// Search APIs
+// ============================================
+
+// Global search
+app.get('/api/search', async (c) => {
+  const { DB } = c.env
+  const query = c.req.query('q') || ''
+  const type = c.req.query('type') || 'all'
+  
+  if (query.length < 2) {
+    return c.json({ results: { users: [], nodes: [], posts: [] } })
+  }
+  
+  const searchTerm = `%${query}%`
+  const results = { users: [], nodes: [], posts: [] }
+  
+  // Search users
+  if (type === 'all' || type === 'user') {
+    const { results: users } = await DB.prepare(`
+      SELECT id, full_name, headline, profile_image
+      FROM users
+      WHERE full_name LIKE ? OR email LIKE ? OR headline LIKE ?
+      LIMIT 10
+    `).bind(searchTerm, searchTerm, searchTerm).all()
+    results.users = users
+  }
+  
+  // Search nodes
+  if (type === 'all' || type === 'node') {
+    const { results: nodes } = await DB.prepare(`
+      SELECT n.*, nt.name as type_name, nt.icon as type_icon, nt.color as type_color
+      FROM nodes n
+      JOIN node_types nt ON n.node_type_id = nt.id
+      WHERE n.name LIKE ? OR n.description LIKE ?
+      LIMIT 10
+    `).bind(searchTerm, searchTerm).all()
+    results.nodes = nodes
+  }
+  
+  // Search posts
+  if (type === 'all' || type === 'post') {
+    const { results: posts } = await DB.prepare(`
+      SELECT p.*, u.full_name, u.profile_image
+      FROM posts p
+      JOIN users u ON p.user_id = u.id
+      WHERE p.content LIKE ?
+      LIMIT 10
+    `).bind(searchTerm).all()
+    results.posts = posts
+  }
+  
+  return c.json({ results })
+})
+
+// ============================================
+// Messages APIs
+// ============================================
+
+// Get conversations
+app.get('/api/messages/conversations', async (c) => {
+  const { DB } = c.env
+  const userId = 1 // TODO: Get from auth
+  
+  const { results } = await DB.prepare(`
+    SELECT 
+      CASE 
+        WHEN sender_id = ? THEN receiver_id 
+        ELSE sender_id 
+      END as other_user_id,
+      MAX(created_at) as last_message_at,
+      COUNT(CASE WHEN receiver_id = ? AND is_read = 0 THEN 1 END) as unread_count
+    FROM messages
+    WHERE sender_id = ? OR receiver_id = ?
+    GROUP BY other_user_id
+    ORDER BY last_message_at DESC
+  `).bind(userId, userId, userId, userId).all()
+  
+  // Get user details for each conversation
+  for (let conv of results) {
+    const user = await DB.prepare(`
+      SELECT id, full_name, profile_image, headline
+      FROM users WHERE id = ?
+    `).bind(conv.other_user_id).first()
+    conv.user = user
+  }
+  
+  return c.json({ conversations: results })
+})
+
+// Get messages with a user
+app.get('/api/messages/:userId', async (c) => {
+  const { DB } = c.env
+  const currentUserId = 1 // TODO: Get from auth
+  const otherUserId = c.req.param('userId')
+  
+  const { results } = await DB.prepare(`
+    SELECT m.*, 
+           sender.full_name as sender_name,
+           sender.profile_image as sender_image
+    FROM messages m
+    JOIN users sender ON m.sender_id = sender.id
+    WHERE (m.sender_id = ? AND m.receiver_id = ?)
+       OR (m.sender_id = ? AND m.receiver_id = ?)
+    ORDER BY m.created_at ASC
+  `).bind(currentUserId, otherUserId, otherUserId, currentUserId).all()
+  
+  // Mark as read
+  await DB.prepare(`
+    UPDATE messages SET is_read = 1
+    WHERE receiver_id = ? AND sender_id = ?
+  `).bind(currentUserId, otherUserId).run()
+  
+  return c.json({ messages: results })
+})
+
+// Send message
+app.post('/api/messages', async (c) => {
+  const { DB } = c.env
+  const { sender_id, receiver_id, content } = await c.req.json()
+  
+  const result = await DB.prepare(`
+    INSERT INTO messages (sender_id, receiver_id, content)
+    VALUES (?, ?, ?)
+  `).bind(sender_id, receiver_id, content).run()
+  
+  // Create notification
+  await DB.prepare(`
+    INSERT INTO notifications (user_id, type, title, message, related_id, related_type)
+    VALUES (?, 'mention', '새 메시지', ?, ?, 'message')
+  `).bind(receiver_id, content.substring(0, 100), result.meta.last_row_id).run()
+  
+  return c.json({ success: true, message_id: result.meta.last_row_id })
 })
 
 export default app
