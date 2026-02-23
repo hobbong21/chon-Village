@@ -1983,10 +1983,318 @@ app.get('/', (c) => {
         <script src="/static/family-network.js"></script>
         <script src="/static/nodes.js"></script>
         <script src="/static/profile-edit.js"></script>
+        <script src="/static/family-advanced.js"></script>
         <script src="/static/app.js"></script>
     </body>
     </html>
   `)
+})
+
+// ============================================
+// Family Advanced Features APIs
+// ============================================
+
+// Family Albums APIs
+// Get all albums
+app.get('/api/family/albums', async (c) => {
+  const { DB } = c.env
+  const userId = 1 // TODO: Get from auth
+  
+  // Get user's family member id
+  const member = await DB.prepare(`
+    SELECT id FROM family_members WHERE user_id = ?
+  `).bind(userId).first()
+  
+  if (!member) {
+    return c.json({ albums: [] })
+  }
+  
+  const { results } = await DB.prepare(`
+    SELECT a.*, fm.name_ko as creator_name, 
+           (SELECT COUNT(*) FROM family_photos WHERE album_id = a.id) as photo_count
+    FROM family_albums a
+    JOIN family_members fm ON a.family_member_id = fm.id
+    ORDER BY a.created_at DESC
+  `).all()
+  
+  return c.json({ albums: results })
+})
+
+// Get album with photos
+app.get('/api/family/albums/:id', async (c) => {
+  const { DB } = c.env
+  const albumId = c.req.param('id')
+  
+  const album = await DB.prepare(`
+    SELECT a.*, fm.name_ko as creator_name
+    FROM family_albums a
+    JOIN family_members fm ON a.family_member_id = fm.id
+    WHERE a.id = ?
+  `).bind(albumId).first()
+  
+  if (!album) {
+    return c.json({ error: 'Album not found' }, 404)
+  }
+  
+  const { results: photos } = await DB.prepare(`
+    SELECT p.*, fm.name_ko as uploader_name
+    FROM family_photos p
+    JOIN family_members fm ON p.uploaded_by = fm.id
+    WHERE p.album_id = ?
+    ORDER BY p.created_at DESC
+  `).bind(albumId).all()
+  
+  return c.json({ album, photos })
+})
+
+// Create album
+app.post('/api/family/albums', async (c) => {
+  const { DB } = c.env
+  const { family_member_id, title, description } = await c.req.json()
+  
+  const result = await DB.prepare(`
+    INSERT INTO family_albums (family_member_id, title, description)
+    VALUES (?, ?, ?)
+  `).bind(family_member_id, title, description || '').run()
+  
+  return c.json({ success: true, album_id: result.meta.last_row_id })
+})
+
+// Upload photo to album
+app.post('/api/family/photos', async (c) => {
+  const { DB } = c.env
+  const { album_id, uploaded_by, image_url, caption, photo_date, is_public } = await c.req.json()
+  
+  const result = await DB.prepare(`
+    INSERT INTO family_photos (album_id, uploaded_by, image_url, caption, photo_date, is_public)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).bind(album_id, uploaded_by, image_url, caption || '', photo_date || null, is_public ? 1 : 0).run()
+  
+  return c.json({ success: true, photo_id: result.meta.last_row_id })
+})
+
+// Delete photo
+app.delete('/api/family/photos/:id', async (c) => {
+  const { DB } = c.env
+  const photoId = c.req.param('id')
+  
+  await DB.prepare(`DELETE FROM family_photos WHERE id = ?`).bind(photoId).run()
+  
+  return c.json({ success: true, message: 'Photo deleted' })
+})
+
+// Family Events APIs
+// Get all events (timeline)
+app.get('/api/family/events', async (c) => {
+  const { DB } = c.env
+  
+  const { results } = await DB.prepare(`
+    SELECT e.*, fm.name_ko as creator_name,
+           GROUP_CONCAT(ep.family_member_id) as participant_ids
+    FROM family_events e
+    JOIN family_members fm ON e.created_by = fm.id
+    LEFT JOIN event_participants ep ON e.id = ep.event_id
+    WHERE e.is_public = 1
+    GROUP BY e.id
+    ORDER BY e.event_date DESC
+    LIMIT 100
+  `).all()
+  
+  return c.json({ events: results })
+})
+
+// Get event details
+app.get('/api/family/events/:id', async (c) => {
+  const { DB } = c.env
+  const eventId = c.req.param('id')
+  
+  const event = await DB.prepare(`
+    SELECT e.*, fm.name_ko as creator_name
+    FROM family_events e
+    JOIN family_members fm ON e.created_by = fm.id
+    WHERE e.id = ?
+  `).bind(eventId).first()
+  
+  if (!event) {
+    return c.json({ error: 'Event not found' }, 404)
+  }
+  
+  const { results: participants } = await DB.prepare(`
+    SELECT ep.*, fm.name_ko, fm.name_en
+    FROM event_participants ep
+    JOIN family_members fm ON ep.family_member_id = fm.id
+    WHERE ep.event_id = ?
+  `).bind(eventId).all()
+  
+  return c.json({ event, participants })
+})
+
+// Create event
+app.post('/api/family/events', async (c) => {
+  const { DB } = c.env
+  const { created_by, event_type, title, description, event_date, location, image_url, participant_ids, is_public } = await c.req.json()
+  
+  const result = await DB.prepare(`
+    INSERT INTO family_events (created_by, event_type, title, description, event_date, location, image_url, is_public)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(created_by, event_type, title, description || '', event_date, location || '', image_url || '', is_public !== false ? 1 : 0).run()
+  
+  const eventId = result.meta.last_row_id
+  
+  // Add participants
+  if (participant_ids && participant_ids.length > 0) {
+    for (const memberId of participant_ids) {
+      await DB.prepare(`
+        INSERT INTO event_participants (event_id, family_member_id)
+        VALUES (?, ?)
+      `).bind(eventId, memberId).run()
+    }
+  }
+  
+  return c.json({ success: true, event_id: eventId })
+})
+
+// Delete event
+app.delete('/api/family/events/:id', async (c) => {
+  const { DB } = c.env
+  const eventId = c.req.param('id')
+  
+  await DB.prepare(`DELETE FROM family_events WHERE id = ?`).bind(eventId).run()
+  
+  return c.json({ success: true, message: 'Event deleted' })
+})
+
+// Family Invitation APIs
+// Create invitation link
+app.post('/api/family/invitations', async (c) => {
+  const { DB } = c.env
+  const { created_by, relationship_type, max_uses, expires_in_days } = await c.req.json()
+  
+  // Generate unique token
+  const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+  
+  // Calculate expiration date
+  let expiresAt = null
+  if (expires_in_days) {
+    const expiryDate = new Date()
+    expiryDate.setDate(expiryDate.getDate() + expires_in_days)
+    expiresAt = expiryDate.toISOString()
+  }
+  
+  const result = await DB.prepare(`
+    INSERT INTO family_invitations (created_by, invitation_token, relationship_type, max_uses, expires_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).bind(created_by, token, relationship_type || null, max_uses || 1, expiresAt).run()
+  
+  return c.json({ 
+    success: true, 
+    invitation_id: result.meta.last_row_id,
+    token,
+    invitation_url: `/family/invite/${token}`
+  })
+})
+
+// Get invitation details
+app.get('/api/family/invitations/:token', async (c) => {
+  const { DB } = c.env
+  const token = c.req.param('token')
+  
+  const invitation = await DB.prepare(`
+    SELECT i.*, fm.name_ko as creator_name
+    FROM family_invitations i
+    JOIN family_members fm ON i.created_by = fm.id
+    WHERE i.invitation_token = ? AND i.is_active = 1
+  `).bind(token).first()
+  
+  if (!invitation) {
+    return c.json({ error: 'Invitation not found or expired' }, 404)
+  }
+  
+  // Check if expired
+  if (invitation.expires_at) {
+    const expiryDate = new Date(invitation.expires_at)
+    if (expiryDate < new Date()) {
+      return c.json({ error: 'Invitation has expired' }, 400)
+    }
+  }
+  
+  // Check if max uses reached
+  if (invitation.uses_count >= invitation.max_uses) {
+    return c.json({ error: 'Invitation has reached maximum uses' }, 400)
+  }
+  
+  return c.json({ invitation })
+})
+
+// Accept invitation
+app.post('/api/family/invitations/:token/accept', async (c) => {
+  const { DB } = c.env
+  const token = c.req.param('token')
+  const { family_member_id } = await c.req.json()
+  
+  // Get invitation
+  const invitation = await DB.prepare(`
+    SELECT * FROM family_invitations
+    WHERE invitation_token = ? AND is_active = 1
+  `).bind(token).first()
+  
+  if (!invitation) {
+    return c.json({ error: 'Invalid invitation' }, 404)
+  }
+  
+  // Check expiry and uses
+  if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
+    return c.json({ error: 'Invitation expired' }, 400)
+  }
+  
+  if (invitation.uses_count >= invitation.max_uses) {
+    return c.json({ error: 'Invitation fully used' }, 400)
+  }
+  
+  // Record acceptance
+  await DB.prepare(`
+    INSERT INTO invitation_acceptances (invitation_id, family_member_id)
+    VALUES (?, ?)
+  `).bind(invitation.id, family_member_id).run()
+  
+  // Update uses count
+  await DB.prepare(`
+    UPDATE family_invitations
+    SET uses_count = uses_count + 1
+    WHERE id = ?
+  `).bind(invitation.id).run()
+  
+  // Create relationship if specified
+  if (invitation.relationship_type) {
+    await DB.prepare(`
+      INSERT OR IGNORE INTO family_relationships (person_id, relative_id, relationship_type)
+      VALUES (?, ?, ?)
+    `).bind(invitation.created_by, family_member_id, invitation.relationship_type).run()
+  }
+  
+  return c.json({ success: true, message: 'Invitation accepted' })
+})
+
+// Get my invitations
+app.get('/api/family/my-invitations', async (c) => {
+  const { DB } = c.env
+  const userId = 1 // TODO: Get from auth
+  
+  const member = await DB.prepare(`
+    SELECT id FROM family_members WHERE user_id = ?
+  `).bind(userId).first()
+  
+  if (!member) {
+    return c.json({ invitations: [] })
+  }
+  
+  const { results } = await DB.prepare(`
+    SELECT * FROM family_invitations
+    WHERE created_by = ?
+    ORDER BY created_at DESC
+  `).bind(member.id).all()
+  
+  return c.json({ invitations: results })
 })
 
 export default app

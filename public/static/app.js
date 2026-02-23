@@ -78,6 +78,15 @@ async function loadPage(page) {
     case 'family':
       await loadKoreanFamilyTree();
       break;
+    case 'albums':
+      await loadFamilyAlbums();
+      break;
+    case 'timeline':
+      await loadFamilyTimeline();
+      break;
+    case 'invitations':
+      await loadFamilyInvitations();
+      break;
     case 'profile':
       await loadProfile(currentUser.id);
       break;
