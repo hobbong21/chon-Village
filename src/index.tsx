@@ -91,6 +91,38 @@ app.get('/api/users/:id/skills', async (c) => {
   return c.json({ skills: results })
 })
 
+// Update user profile
+app.put('/api/users/:id', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('id')
+  const { full_name, headline, email } = await c.req.json()
+  
+  // Update users table
+  await DB.prepare(`
+    UPDATE users 
+    SET full_name = ?, headline = ?, email = ?
+    WHERE id = ?
+  `).bind(full_name, headline, email, userId).run()
+  
+  return c.json({ success: true, message: 'Profile updated' })
+})
+
+// Update user profile details
+app.put('/api/users/:id/profile', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('id')
+  const { about, location, website } = await c.req.json()
+  
+  // Update profiles table
+  await DB.prepare(`
+    UPDATE profiles 
+    SET about = ?, location = ?, website = ?
+    WHERE user_id = ?
+  `).bind(about, location, website, userId).run()
+  
+  return c.json({ success: true, message: 'Profile details updated' })
+})
+
 // Get all posts (feed)
 app.get('/api/posts', async (c) => {
   const { DB } = c.env
@@ -122,6 +154,82 @@ app.get('/api/users/:id/posts', async (c) => {
   return c.json({ posts: results })
 })
 
+// Create experience
+app.post('/api/experiences', async (c) => {
+  const { DB } = c.env
+  const { user_id, position, company, start_date, end_date, description, is_current } = await c.req.json()
+  
+  const result = await DB.prepare(`
+    INSERT INTO experiences (user_id, position, company, start_date, end_date, description, is_current)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).bind(user_id, position, company, start_date, end_date || null, description || '', is_current ? 1 : 0).run()
+  
+  return c.json({ success: true, experience_id: result.meta.last_row_id })
+})
+
+// Update experience
+app.put('/api/experiences/:id', async (c) => {
+  const { DB } = c.env
+  const expId = c.req.param('id')
+  const { position, company, start_date, end_date, description, is_current } = await c.req.json()
+  
+  await DB.prepare(`
+    UPDATE experiences
+    SET position = ?, company = ?, start_date = ?, end_date = ?, description = ?, is_current = ?
+    WHERE id = ?
+  `).bind(position, company, start_date, end_date || null, description || '', is_current ? 1 : 0, expId).run()
+  
+  return c.json({ success: true, message: 'Experience updated' })
+})
+
+// Delete experience
+app.delete('/api/experiences/:id', async (c) => {
+  const { DB } = c.env
+  const expId = c.req.param('id')
+  
+  await DB.prepare(`DELETE FROM experiences WHERE id = ?`).bind(expId).run()
+  
+  return c.json({ success: true, message: 'Experience deleted' })
+})
+
+// Create education
+app.post('/api/education', async (c) => {
+  const { DB } = c.env
+  const { user_id, school, degree, field_of_study, start_date, end_date, description } = await c.req.json()
+  
+  const result = await DB.prepare(`
+    INSERT INTO education (user_id, school, degree, field_of_study, start_date, end_date, description)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).bind(user_id, school, degree, field_of_study, start_date, end_date || null, description || '').run()
+  
+  return c.json({ success: true, education_id: result.meta.last_row_id })
+})
+
+// Update education
+app.put('/api/education/:id', async (c) => {
+  const { DB } = c.env
+  const eduId = c.req.param('id')
+  const { school, degree, field_of_study, start_date, end_date, description } = await c.req.json()
+  
+  await DB.prepare(`
+    UPDATE education
+    SET school = ?, degree = ?, field_of_study = ?, start_date = ?, end_date = ?, description = ?
+    WHERE id = ?
+  `).bind(school, degree, field_of_study, start_date, end_date || null, description || '', eduId).run()
+  
+  return c.json({ success: true, message: 'Education updated' })
+})
+
+// Delete education
+app.delete('/api/education/:id', async (c) => {
+  const { DB } = c.env
+  const eduId = c.req.param('id')
+  
+  await DB.prepare(`DELETE FROM education WHERE id = ?`).bind(eduId).run()
+  
+  return c.json({ success: true, message: 'Education deleted' })
+})
+
 // Create new post
 app.post('/api/posts', async (c) => {
   const { DB } = c.env
@@ -133,6 +241,29 @@ app.post('/api/posts', async (c) => {
   `).bind(user_id, content, image_url || null).run()
   
   return c.json({ id: result.meta.last_row_id, user_id, content, image_url })
+})
+
+// Add skill
+app.post('/api/skills', async (c) => {
+  const { DB } = c.env
+  const { user_id, skill_name } = await c.req.json()
+  
+  const result = await DB.prepare(`
+    INSERT INTO skills (user_id, skill_name, endorsements)
+    VALUES (?, ?, 0)
+  `).bind(user_id, skill_name).run()
+  
+  return c.json({ success: true, skill_id: result.meta.last_row_id })
+})
+
+// Delete skill
+app.delete('/api/skills/:id', async (c) => {
+  const { DB } = c.env
+  const skillId = c.req.param('id')
+  
+  await DB.prepare(`DELETE FROM skills WHERE id = ?`).bind(skillId).run()
+  
+  return c.json({ success: true, message: 'Skill deleted' })
 })
 
 // Like a post
@@ -208,6 +339,219 @@ app.get('/api/users/:id/connections', async (c) => {
   
   return c.json({ connections: results })
 })
+
+// ============================================
+// PROFILE EDIT APIs
+// ============================================
+
+// Update user profile
+app.put('/api/users/:id', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('id')
+  const { full_name, headline, email } = await c.req.json()
+  
+  try {
+    await DB.prepare(`
+      UPDATE users 
+      SET full_name = ?, headline = ?, email = ?
+      WHERE id = ?
+    `).bind(full_name, headline, email, userId).run()
+    
+    return c.json({ success: true, message: 'Profile updated' })
+  } catch (error) {
+    return c.json({ error: 'Failed to update profile' }, 400)
+  }
+})
+
+// Update user profile details
+app.put('/api/users/:id/profile', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('id')
+  const { about, location, website } = await c.req.json()
+  
+  try {
+    // Check if profile exists
+    const existing = await DB.prepare(`
+      SELECT user_id FROM profiles WHERE user_id = ?
+    `).bind(userId).first()
+    
+    if (existing) {
+      // Update existing profile
+      await DB.prepare(`
+        UPDATE profiles 
+        SET about = ?, location = ?, website = ?
+        WHERE user_id = ?
+      `).bind(about, location, website, userId).run()
+    } else {
+      // Insert new profile
+      await DB.prepare(`
+        INSERT INTO profiles (user_id, about, location, website)
+        VALUES (?, ?, ?, ?)
+      `).bind(userId, about, location, website).run()
+    }
+    
+    return c.json({ success: true, message: 'Profile details updated' })
+  } catch (error) {
+    return c.json({ error: 'Failed to update profile details' }, 400)
+  }
+})
+
+// Add experience
+app.post('/api/users/:id/experiences', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('id')
+  const { company, position, description, start_date, end_date, is_current } = await c.req.json()
+  
+  try {
+    const result = await DB.prepare(`
+      INSERT INTO experiences (user_id, company, position, description, start_date, end_date, is_current)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(userId, company, position, description || null, start_date, end_date || null, is_current ? 1 : 0).run()
+    
+    return c.json({ 
+      success: true, 
+      id: result.meta.last_row_id,
+      message: 'Experience added' 
+    })
+  } catch (error) {
+    return c.json({ error: 'Failed to add experience' }, 400)
+  }
+})
+
+// Update experience
+app.put('/api/experiences/:id', async (c) => {
+  const { DB } = c.env
+  const expId = c.req.param('id')
+  const { company, position, description, start_date, end_date, is_current } = await c.req.json()
+  
+  try {
+    await DB.prepare(`
+      UPDATE experiences 
+      SET company = ?, position = ?, description = ?, 
+          start_date = ?, end_date = ?, is_current = ?
+      WHERE id = ?
+    `).bind(company, position, description || null, start_date, end_date || null, is_current ? 1 : 0, expId).run()
+    
+    return c.json({ success: true, message: 'Experience updated' })
+  } catch (error) {
+    return c.json({ error: 'Failed to update experience' }, 400)
+  }
+})
+
+// Delete experience
+app.delete('/api/experiences/:id', async (c) => {
+  const { DB } = c.env
+  const expId = c.req.param('id')
+  
+  try {
+    await DB.prepare(`
+      DELETE FROM experiences WHERE id = ?
+    `).bind(expId).run()
+    
+    return c.json({ success: true, message: 'Experience deleted' })
+  } catch (error) {
+    return c.json({ error: 'Failed to delete experience' }, 400)
+  }
+})
+
+// Add education
+app.post('/api/users/:id/education', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('id')
+  const { school, degree, field_of_study, start_date, end_date } = await c.req.json()
+  
+  try {
+    const result = await DB.prepare(`
+      INSERT INTO education (user_id, school, degree, field_of_study, start_date, end_date)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(userId, school, degree, field_of_study, start_date, end_date || null).run()
+    
+    return c.json({ 
+      success: true, 
+      id: result.meta.last_row_id,
+      message: 'Education added' 
+    })
+  } catch (error) {
+    return c.json({ error: 'Failed to add education' }, 400)
+  }
+})
+
+// Update education
+app.put('/api/education/:id', async (c) => {
+  const { DB } = c.env
+  const eduId = c.req.param('id')
+  const { school, degree, field_of_study, start_date, end_date } = await c.req.json()
+  
+  try {
+    await DB.prepare(`
+      UPDATE education 
+      SET school = ?, degree = ?, field_of_study = ?, start_date = ?, end_date = ?
+      WHERE id = ?
+    `).bind(school, degree, field_of_study, start_date, end_date || null, eduId).run()
+    
+    return c.json({ success: true, message: 'Education updated' })
+  } catch (error) {
+    return c.json({ error: 'Failed to update education' }, 400)
+  }
+})
+
+// Delete education
+app.delete('/api/education/:id', async (c) => {
+  const { DB } = c.env
+  const eduId = c.req.param('id')
+  
+  try {
+    await DB.prepare(`
+      DELETE FROM education WHERE id = ?
+    `).bind(eduId).run()
+    
+    return c.json({ success: true, message: 'Education deleted' })
+  } catch (error) {
+    return c.json({ error: 'Failed to delete education' }, 400)
+  }
+})
+
+// Add skill
+app.post('/api/users/:id/skills', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('id')
+  const { skill_name } = await c.req.json()
+  
+  try {
+    const result = await DB.prepare(`
+      INSERT INTO skills (user_id, skill_name, endorsements)
+      VALUES (?, ?, 0)
+    `).bind(userId, skill_name).run()
+    
+    return c.json({ 
+      success: true, 
+      id: result.meta.last_row_id,
+      message: 'Skill added' 
+    })
+  } catch (error) {
+    return c.json({ error: 'Skill already exists or failed to add' }, 400)
+  }
+})
+
+// Delete skill
+app.delete('/api/skills/:id', async (c) => {
+  const { DB } = c.env
+  const skillId = c.req.param('id')
+  
+  try {
+    await DB.prepare(`
+      DELETE FROM skills WHERE id = ?
+    `).bind(skillId).run()
+    
+    return c.json({ success: true, message: 'Skill deleted' })
+  } catch (error) {
+    return c.json({ error: 'Failed to delete skill' }, 400)
+  }
+})
+
+// ============================================
+// END OF PROFILE EDIT APIs
+// ============================================
 
 // Send connection request
 app.post('/api/connections', async (c) => {
@@ -1638,6 +1982,7 @@ app.get('/', (c) => {
         <script src="/static/korean-family-tree.js"></script>
         <script src="/static/family-network.js"></script>
         <script src="/static/nodes.js"></script>
+        <script src="/static/profile-edit.js"></script>
         <script src="/static/app.js"></script>
     </body>
     </html>

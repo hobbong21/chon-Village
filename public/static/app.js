@@ -325,30 +325,43 @@ async function loadProfile(userId) {
     const skills = skillsResponse.data.skills;
     const userPosts = postsResponse.data.posts;
     
+    const isOwnProfile = currentUser.id === parseInt(userId);
+    
     mainContent.innerHTML = `
       <!-- Profile Header -->
       <div class="card">
         <div class="flex items-start space-x-6">
           <img src="${user.profile_image}" class="w-32 h-32 rounded-full border-4 border-blue-100">
           <div class="flex-1">
-            <h2 class="text-3xl font-bold">${user.full_name}</h2>
-            <p class="text-lg text-gray-600 mt-1">${user.headline || '전문가'}</p>
-            <p class="text-gray-500 mt-2">
-              <i class="fas fa-map-marker-alt mr-1"></i>${user.location || '위치 미제공'}
-            </p>
-            ${user.website ? `
-              <a href="${user.website}" target="_blank" class="text-blue-600 hover:underline mt-2 inline-block">
-                <i class="fas fa-link mr-1"></i>${user.website}
-              </a>
-            ` : ''}
-            <div class="mt-4 flex space-x-3">
-              <button class="btn-primary">
-                <i class="fas fa-user-plus mr-1"></i>연결
-              </button>
-              <button class="btn-secondary">
-                <i class="fas fa-envelope mr-1"></i>메시지
-              </button>
+            <div class="flex justify-between items-start">
+              <div>
+                <h2 class="text-3xl font-bold">${user.full_name}</h2>
+                <p class="text-lg text-gray-600 mt-1">${user.headline || '전문가'}</p>
+                <p class="text-gray-500 mt-2">
+                  <i class="fas fa-map-marker-alt mr-1"></i>${user.location || '위치 미제공'}
+                </p>
+                ${user.website ? `
+                  <a href="${user.website}" target="_blank" class="text-blue-600 hover:underline mt-2 inline-block">
+                    <i class="fas fa-link mr-1"></i>${user.website}
+                  </a>
+                ` : ''}
+              </div>
+              ${isOwnProfile ? `
+                <button onclick="showEditProfileModal()" class="btn-secondary">
+                  <i class="fas fa-edit mr-1"></i>프로필 편집
+                </button>
+              ` : ''}
             </div>
+            ${!isOwnProfile ? `
+              <div class="mt-4 flex space-x-3">
+                <button class="btn-primary">
+                  <i class="fas fa-user-plus mr-1"></i>연결
+                </button>
+                <button class="btn-secondary">
+                  <i class="fas fa-envelope mr-1"></i>메시지
+                </button>
+              </div>
+            ` : ''}
           </div>
         </div>
         
@@ -361,11 +374,18 @@ async function loadProfile(userId) {
       </div>
       
       <!-- Experience -->
-      ${experiences.length > 0 ? `
-        <div class="card">
-          <h3 class="font-bold text-xl mb-4">
+      <div class="card">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold text-xl">
             <i class="fas fa-briefcase mr-2"></i>경력
           </h3>
+          ${isOwnProfile ? `
+            <button onclick="showAddExperienceModal()" class="btn-secondary text-sm">
+              <i class="fas fa-plus mr-1"></i>추가
+            </button>
+          ` : ''}
+        </div>
+        ${experiences.length > 0 ? `
           <div class="space-y-6">
             ${experiences.map(exp => `
               <div class="flex">
@@ -373,25 +393,41 @@ async function loadProfile(userId) {
                   <i class="fas fa-building text-blue-600"></i>
                 </div>
                 <div class="flex-1">
-                  <h4 class="font-bold">${exp.position}</h4>
-                  <p class="text-gray-600">${exp.company}</p>
-                  <p class="text-sm text-gray-500 mt-1">
-                    ${exp.start_date} - ${exp.is_current ? '현재' : exp.end_date}
-                  </p>
-                  ${exp.description ? `<p class="text-gray-700 mt-2">${exp.description}</p>` : ''}
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <h4 class="font-bold">${exp.position}</h4>
+                      <p class="text-gray-600">${exp.company}</p>
+                      <p class="text-sm text-gray-500 mt-1">
+                        ${exp.start_date} - ${exp.is_current ? '현재' : exp.end_date}
+                      </p>
+                      ${exp.description ? `<p class="text-gray-700 mt-2">${exp.description}</p>` : ''}
+                    </div>
+                    ${isOwnProfile ? `
+                      <button onclick="deleteExperience(${exp.id})" class="text-red-500 hover:text-red-700 text-sm">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    ` : ''}
+                  </div>
                 </div>
               </div>
             `).join('')}
           </div>
-        </div>
-      ` : ''}
+        ` : `<p class="text-gray-500">등록된 경력이 없습니다.</p>`}
+      </div>
       
       <!-- Education -->
-      ${education.length > 0 ? `
-        <div class="card">
-          <h3 class="font-bold text-xl mb-4">
+      <div class="card">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold text-xl">
             <i class="fas fa-graduation-cap mr-2"></i>학력
           </h3>
+          ${isOwnProfile ? `
+            <button onclick="showAddEducationModal()" class="btn-secondary text-sm">
+              <i class="fas fa-plus mr-1"></i>추가
+            </button>
+          ` : ''}
+        </div>
+        ${education.length > 0 ? `
           <div class="space-y-6">
             ${education.map(edu => `
               <div class="flex">
@@ -399,35 +435,56 @@ async function loadProfile(userId) {
                   <i class="fas fa-university text-green-600"></i>
                 </div>
                 <div class="flex-1">
-                  <h4 class="font-bold">${edu.school}</h4>
-                  <p class="text-gray-600">${edu.degree} - ${edu.field_of_study}</p>
-                  <p class="text-sm text-gray-500 mt-1">
-                    ${edu.start_date} - ${edu.end_date}
-                  </p>
-                  ${edu.description ? `<p class="text-gray-700 mt-2">${edu.description}</p>` : ''}
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <h4 class="font-bold">${edu.school}</h4>
+                      <p class="text-gray-600">${edu.degree} - ${edu.field_of_study}</p>
+                      <p class="text-sm text-gray-500 mt-1">
+                        ${edu.start_date} - ${edu.end_date}
+                      </p>
+                      ${edu.description ? `<p class="text-gray-700 mt-2">${edu.description}</p>` : ''}
+                    </div>
+                    ${isOwnProfile ? `
+                      <button onclick="deleteEducation(${edu.id})" class="text-red-500 hover:text-red-700 text-sm">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    ` : ''}
+                  </div>
                 </div>
               </div>
             `).join('')}
           </div>
-        </div>
-      ` : ''}
+        ` : `<p class="text-gray-500">등록된 학력이 없습니다.</p>`}
+      </div>
       
       <!-- Skills -->
-      ${skills.length > 0 ? `
-        <div class="card">
-          <h3 class="font-bold text-xl mb-4">
+      <div class="card">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold text-xl">
             <i class="fas fa-star mr-2"></i>스킬
           </h3>
+          ${isOwnProfile ? `
+            <button onclick="showAddSkillModal()" class="btn-secondary text-sm">
+              <i class="fas fa-plus mr-1"></i>추가
+            </button>
+          ` : ''}
+        </div>
+        ${skills.length > 0 ? `
           <div class="flex flex-wrap gap-2">
             ${skills.map(skill => `
-              <div class="bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-medium">
+              <div class="bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-medium flex items-center">
                 ${skill.skill_name}
                 <span class="ml-2 text-blue-600">${skill.endorsements}</span>
+                ${isOwnProfile ? `
+                  <button onclick="deleteSkill(${skill.id})" class="ml-2 text-red-500 hover:text-red-700">
+                    <i class="fas fa-times text-xs"></i>
+                  </button>
+                ` : ''}
               </div>
             `).join('')}
           </div>
-        </div>
-      ` : ''}
+        ` : `<p class="text-gray-500">등록된 스킬이 없습니다.</p>`}
+      </div>
       
       <!-- Posts -->
       ${userPosts.length > 0 ? `
