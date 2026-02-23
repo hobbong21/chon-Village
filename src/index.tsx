@@ -2419,8 +2419,10 @@ app.get('/', (c) => {
         </script>
 
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <script src="https://d3js.org/d3.v7.min.js"></script>
         <script src="/static/korean-family-tree.js"></script>
         <script src="/static/family-network.js"></script>
+        <script src="/static/dynamic-network.js"></script>
         <script src="/static/nodes.js"></script>
         <script src="/static/profile-edit.js"></script>
         <script src="/static/family-advanced.js"></script>

@@ -31,9 +31,14 @@ async function loadNodesPage() {
             <h2 class="text-2xl font-bold text-gray-800">노드 네트워크</h2>
             <p class="text-gray-600 mt-1">학교, 직장, 동호회 등 다양한 그룹에 참여하세요</p>
           </div>
-          <button onclick="showCreateNodeModal()" class="btn-primary">
-            <i class="fas fa-plus mr-2"></i>노드 생성
-          </button>
+          <div class="flex space-x-2">
+            <button onclick="showNodeNetwork()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition">
+              <i class="fas fa-project-diagram mr-2"></i>내 네트워크
+            </button>
+            <button onclick="showCreateNodeModal()" class="btn-primary">
+              <i class="fas fa-plus mr-2"></i>노드 생성
+            </button>
+          </div>
         </div>
 
         <!-- Tabs -->
@@ -217,7 +222,7 @@ function renderNodesGrid(nodes) {
   content.innerHTML = `
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       ${nodes.map(node => `
-        <div class="card hover:shadow-lg transition-shadow cursor-pointer" onclick="showNodeDetail(${node.id})">
+        <div class="card hover:shadow-lg transition-shadow">
           <!-- Node Icon & Type -->
           <div class="flex items-center mb-3">
             <div class="w-12 h-12 rounded-lg flex items-center justify-center text-2xl" 
@@ -235,11 +240,13 @@ function renderNodesGrid(nodes) {
           </div>
 
           <!-- Node Info -->
-          <h3 class="text-lg font-bold text-gray-800 mb-2">${node.name}</h3>
-          <p class="text-sm text-gray-600 mb-4 line-clamp-2">${node.description || '설명 없음'}</p>
+          <div onclick="showNodeDetail(${node.id})" class="cursor-pointer">
+            <h3 class="text-lg font-bold text-gray-800 mb-2">${node.name}</h3>
+            <p class="text-sm text-gray-600 mb-4 line-clamp-2">${node.description || '설명 없음'}</p>
+          </div>
 
           <!-- Stats -->
-          <div class="flex items-center justify-between text-sm text-gray-500 border-t pt-3">
+          <div class="flex items-center justify-between text-sm text-gray-500 border-t pt-3 mb-3">
             <div class="flex items-center">
               <i class="fas fa-users mr-1"></i>
               <span>${node.member_count}명</span>
@@ -250,6 +257,18 @@ function renderNodesGrid(nodes) {
                 ${node.verification_level}
               </span>
             </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex space-x-2">
+            <button onclick="showNodeDetail(${node.id}); event.stopPropagation();" 
+                    class="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition">
+              <i class="fas fa-info-circle mr-1"></i>상세
+            </button>
+            <button onclick="showNodeNetwork(${node.id}); event.stopPropagation();" 
+                    class="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition">
+              <i class="fas fa-project-diagram mr-1"></i>네트워크
+            </button>
           </div>
 
           <!-- Creator -->
@@ -282,8 +301,8 @@ function renderMyNodesGrid(nodes) {
   content.innerHTML = `
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       ${nodes.map(node => `
-        <div class="card hover:shadow-lg transition-shadow cursor-pointer" onclick="showNodeDetail(${node.id})">
-          <div class="flex items-start">
+        <div class="card hover:shadow-lg transition-shadow">
+          <div class="flex items-start mb-3">
             <!-- Node Icon -->
             <div class="w-16 h-16 rounded-lg flex items-center justify-center text-3xl mr-4" 
                  style="background: ${node.type_color}20; color: ${node.type_color}">
@@ -322,6 +341,18 @@ function renderMyNodesGrid(nodes) {
                 가입일: ${new Date(node.joined_at).toLocaleDateString('ko-KR')}
               </div>
             </div>
+          </div>
+          
+          <!-- Action Buttons -->
+          <div class="flex space-x-2 border-t pt-3">
+            <button onclick="showNodeDetail(${node.id}); event.stopPropagation();" 
+                    class="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition">
+              <i class="fas fa-info-circle mr-1"></i>상세
+            </button>
+            <button onclick="showNodeNetwork(${node.id}); event.stopPropagation();" 
+                    class="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition">
+              <i class="fas fa-project-diagram mr-1"></i>네트워크
+            </button>
           </div>
         </div>
       `).join('')}
