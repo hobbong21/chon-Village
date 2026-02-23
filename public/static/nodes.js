@@ -458,7 +458,7 @@ async function showNodeDetail(nodeId) {
         </div>
 
         <!-- Stats -->
-        <div class="grid grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div class="text-center p-4 bg-gray-50 rounded-lg">
             <div class="text-2xl font-bold text-blue-600">${node.member_count}</div>
             <div class="text-sm text-gray-600">멤버</div>

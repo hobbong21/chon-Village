@@ -1819,77 +1819,244 @@ app.get('/', (c) => {
     <html lang="ko">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <title>CHON-Network - 전문가 네트워킹 플랫폼</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <style>
-          .card { @apply bg-white rounded-lg shadow-md p-6 mb-4; }
-          .btn-primary { @apply bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition; }
-          .btn-secondary { @apply bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition; }
+          /* Base styles */
+          * {
+            -webkit-tap-highlight-color: transparent;
+          }
           
+          /* Responsive card */
+          .card { 
+            @apply bg-white rounded-lg shadow-md p-4 md:p-6 mb-4; 
+          }
+          
+          /* Responsive buttons */
+          .btn-primary { 
+            @apply bg-blue-600 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg hover:bg-blue-700 transition text-sm md:text-base; 
+          }
+          .btn-secondary { 
+            @apply bg-gray-200 text-gray-700 px-3 py-2 md:px-4 md:py-2 rounded-lg hover:bg-gray-300 transition text-sm md:text-base; 
+          }
+          
+          /* Tab buttons */
           .tab-button {
-            @apply px-4 py-2 text-gray-600 hover:text-blue-600 transition border-b-2 border-transparent;
+            @apply px-3 py-2 md:px-4 md:py-2 text-sm md:text-base text-gray-600 hover:text-blue-600 transition border-b-2 border-transparent;
           }
           .tab-button.active {
             @apply text-blue-600 border-blue-600 font-semibold;
           }
           
-          .modal {
-            @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4;
+          /* Responsive modal */
+          .modal-overlay {
+            @apply fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50;
           }
           .modal-content {
-            @apply bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-screen overflow-y-auto;
+            @apply bg-white rounded-t-2xl md:rounded-lg shadow-xl p-4 md:p-6 max-w-2xl w-full max-h-[90vh] md:max-h-[80vh] overflow-y-auto;
+            animation: slideUp 0.3s ease-out;
           }
           
+          @keyframes slideUp {
+            from {
+              transform: translateY(100%);
+            }
+            to {
+              transform: translateY(0);
+            }
+          }
+          
+          /* Mobile navigation */
+          .mobile-nav {
+            @apply fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+          }
+          
+          .mobile-nav-item {
+            @apply flex flex-col items-center justify-center py-2 text-gray-600 hover:text-blue-600 transition;
+          }
+          
+          .mobile-nav-item.active {
+            @apply text-blue-600;
+          }
+          
+          /* Hamburger menu */
+          .hamburger {
+            @apply md:hidden cursor-pointer p-2;
+          }
+          
+          .hamburger-line {
+            @apply w-6 h-0.5 bg-gray-700 mb-1 transition-all;
+          }
+          
+          .hamburger.active .hamburger-line:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+          }
+          
+          .hamburger.active .hamburger-line:nth-child(2) {
+            opacity: 0;
+          }
+          
+          .hamburger.active .hamburger-line:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -6px);
+          }
+          
+          /* Mobile menu */
+          .mobile-menu {
+            @apply fixed top-16 left-0 right-0 bg-white shadow-lg z-40 md:hidden;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out;
+          }
+          
+          .mobile-menu.active {
+            max-height: 500px;
+          }
+          
+          /* Responsive grid */
+          .responsive-grid {
+            @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6;
+          }
+          
+          /* Touch-friendly */
+          .touch-target {
+            min-height: 44px;
+            min-width: 44px;
+          }
+          
+          /* Line clamp */
           .line-clamp-2 {
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
           }
+          
+          /* Sticky header adjustment for mobile nav */
+          body {
+            padding-bottom: 60px;
+          }
+          
+          @media (min-width: 768px) {
+            body {
+              padding-bottom: 0;
+            }
+          }
+          
+          /* Improved scrollbar */
+          ::-webkit-scrollbar {
+            width: 8px;
+          }
+          
+          ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+          }
+          
+          ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+          }
+          
+          ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+          }
         </style>
     </head>
     <body class="bg-gray-100">
-        <!-- Navigation -->
+        <!-- Top Navigation -->
         <nav class="bg-white shadow-md sticky top-0 z-50">
             <div class="max-w-7xl mx-auto px-4">
                 <div class="flex justify-between items-center h-16">
-                    <div class="flex items-center space-x-8">
-                        <h1 class="text-2xl font-bold text-blue-600">
-                            <i class="fas fa-network-wired mr-2"></i>CHON-Network
+                    <!-- Logo -->
+                    <div class="flex items-center">
+                        <h1 class="text-xl md:text-2xl font-bold text-blue-600">
+                            <i class="fas fa-network-wired mr-1 md:mr-2"></i>
+                            <span class="hidden sm:inline">CHON-Network</span>
+                            <span class="sm:hidden">CHON</span>
                         </h1>
-                        <div class="hidden md:flex space-x-4">
-                            <a href="#" class="nav-link text-gray-700 hover:text-blue-600" data-page="feed">
-                                <i class="fas fa-home mr-1"></i>홈
-                            </a>
-                            <a href="#" class="nav-link text-gray-700 hover:text-blue-600" data-page="nodes">
-                                <i class="fas fa-sitemap mr-1"></i>노드
-                            </a>
-                            <a href="#" class="nav-link text-gray-700 hover:text-blue-600" data-page="profile">
-                                <i class="fas fa-user mr-1"></i>프로필
-                            </a>
-                        </div>
                     </div>
-                    <div class="flex items-center space-x-4">
-                        <input type="text" id="searchInput" placeholder="사람 검색..." 
-                               class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <button class="btn-secondary">
-                            <i class="fas fa-bell"></i>
+                    
+                    <!-- Desktop Navigation -->
+                    <div class="hidden md:flex items-center space-x-4">
+                        <a href="#" class="nav-link text-gray-700 hover:text-blue-600 transition" data-page="feed">
+                            <i class="fas fa-home mr-1"></i>홈
+                        </a>
+                        <a href="#" class="nav-link text-gray-700 hover:text-blue-600 transition" data-page="nodes">
+                            <i class="fas fa-sitemap mr-1"></i>노드
+                        </a>
+                        <a href="#" class="nav-link text-gray-700 hover:text-blue-600 transition" data-page="family">
+                            <i class="fas fa-users mr-1"></i>가족
+                        </a>
+                        <a href="#" class="nav-link text-gray-700 hover:text-blue-600 transition" data-page="profile">
+                            <i class="fas fa-user mr-1"></i>프로필
+                        </a>
+                    </div>
+                    
+                    <!-- Right Side Actions -->
+                    <div class="flex items-center space-x-2">
+                        <!-- Search (Desktop) -->
+                        <div class="hidden lg:block">
+                            <input type="text" id="searchInput" placeholder="사람 검색..." 
+                                   class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        </div>
+                        
+                        <!-- Notifications -->
+                        <button class="p-2 text-gray-700 hover:text-blue-600 transition touch-target">
+                            <i class="fas fa-bell text-lg"></i>
                         </button>
-                        <a href="/login" id="logoutBtn" class="btn-secondary">
+                        
+                        <!-- Hamburger Menu (Mobile) -->
+                        <button class="hamburger md:hidden" onclick="toggleMobileMenu()">
+                            <div class="hamburger-line"></div>
+                            <div class="hamburger-line"></div>
+                            <div class="hamburger-line"></div>
+                        </button>
+                        
+                        <!-- Logout (Desktop) -->
+                        <a href="/login" id="logoutBtn" class="hidden md:block btn-secondary">
                             <i class="fas fa-sign-out-alt mr-1"></i>로그아웃
                         </a>
                     </div>
                 </div>
             </div>
+            
+            <!-- Mobile Menu -->
+            <div id="mobileMenu" class="mobile-menu">
+                <div class="py-2">
+                    <!-- Search (Mobile) -->
+                    <div class="px-4 py-2">
+                        <input type="text" placeholder="사람 검색..." 
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                    </div>
+                    
+                    <!-- Family Menu Items -->
+                    <a href="#" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 transition" data-page="albums" onclick="toggleMobileMenu()">
+                        <i class="fas fa-images mr-2"></i>가족 앨범
+                    </a>
+                    <a href="#" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 transition" data-page="timeline" onclick="toggleMobileMenu()">
+                        <i class="fas fa-calendar-alt mr-2"></i>가족 타임라인
+                    </a>
+                    <a href="#" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 transition" data-page="invitations" onclick="toggleMobileMenu()">
+                        <i class="fas fa-link mr-2"></i>초대 링크
+                    </a>
+                    
+                    <div class="border-t my-2"></div>
+                    
+                    <!-- Logout -->
+                    <a href="/login" class="block px-4 py-3 text-red-600 hover:bg-red-50 transition">
+                        <i class="fas fa-sign-out-alt mr-2"></i>로그아웃
+                    </a>
+                </div>
+            </div>
         </nav>
 
         <!-- Main Content -->
-        <div class="max-w-7xl mx-auto px-4 py-6">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-                <!-- Left Sidebar -->
-                <div class="md:col-span-3">
+        <div class="max-w-7xl mx-auto px-2 sm:px-4 py-4 md:py-6">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
+                <!-- Left Sidebar (Hidden on Mobile) -->
+                <div class="hidden md:block md:col-span-3">
                     <!-- Profile Card -->
                     <div id="profileCard" class="card">
                         <div class="text-center">
@@ -1959,17 +2126,17 @@ app.get('/', (c) => {
                 </div>
 
                 <!-- Main Content Area -->
-                <div class="md:col-span-6">
+                <div class="md:col-span-9 lg:col-span-6">
                     <div id="mainContent"></div>
                 </div>
 
-                <!-- Right Sidebar -->
-                <div class="md:col-span-3">
+                <!-- Right Sidebar (Hidden on Mobile & Tablet) -->
+                <div class="hidden lg:block lg:col-span-3">
                     <div class="card">
                         <div class="flex justify-between items-center mb-4">
-                            <h3 class="font-bold">추천 연결</h3>
+                            <h3 class="font-bold text-sm">추천 연결</h3>
                             <button onclick="refreshSuggestedConnections()" class="text-blue-600 hover:text-blue-800 transition" title="새로고침">
-                                <i class="fas fa-sync-alt"></i>
+                                <i class="fas fa-sync-alt text-sm"></i>
                             </button>
                         </div>
                         <div id="suggestedConnections"></div>
@@ -1977,6 +2144,87 @@ app.get('/', (c) => {
                 </div>
             </div>
         </div>
+        
+        <!-- Mobile Bottom Navigation -->
+        <nav class="mobile-nav md:hidden">
+            <div class="grid grid-cols-5 h-16">
+                <a href="#" class="mobile-nav-item" data-page="feed">
+                    <i class="fas fa-home text-xl mb-1"></i>
+                    <span class="text-xs">홈</span>
+                </a>
+                <a href="#" class="mobile-nav-item" data-page="nodes">
+                    <i class="fas fa-sitemap text-xl mb-1"></i>
+                    <span class="text-xs">노드</span>
+                </a>
+                <a href="#" class="mobile-nav-item" data-page="family">
+                    <i class="fas fa-users text-xl mb-1"></i>
+                    <span class="text-xs">가족</span>
+                </a>
+                <a href="#" class="mobile-nav-item" data-page="albums">
+                    <i class="fas fa-images text-xl mb-1"></i>
+                    <span class="text-xs">앨범</span>
+                </a>
+                <a href="#" class="mobile-nav-item" data-page="profile">
+                    <i class="fas fa-user text-xl mb-1"></i>
+                    <span class="text-xs">프로필</span>
+                </a>
+            </div>
+        </nav>
+
+        <script>
+          // Mobile menu toggle
+          function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            const hamburger = document.querySelector('.hamburger');
+            menu.classList.toggle('active');
+            hamburger.classList.toggle('active');
+          }
+          
+          // Mobile navigation active state
+          document.addEventListener('DOMContentLoaded', () => {
+            const mobileNavItems = document.querySelectorAll('.mobile-nav-item');
+            const desktopNavLinks = document.querySelectorAll('.nav-link');
+            
+            function setActiveNav(page) {
+              // Mobile nav
+              mobileNavItems.forEach(item => {
+                if (item.getAttribute('data-page') === page) {
+                  item.classList.add('active');
+                } else {
+                  item.classList.remove('active');
+                }
+              });
+              
+              // Desktop nav
+              desktopNavLinks.forEach(link => {
+                if (link.getAttribute('data-page') === page) {
+                  link.classList.add('text-blue-600', 'font-semibold');
+                } else {
+                  link.classList.remove('text-blue-600', 'font-semibold');
+                }
+              });
+            }
+            
+            // Set active on click
+            [...mobileNavItems, ...desktopNavLinks].forEach(item => {
+              item.addEventListener('click', (e) => {
+                const page = item.getAttribute('data-page');
+                setActiveNav(page);
+                
+                // Close mobile menu if open
+                const menu = document.getElementById('mobileMenu');
+                const hamburger = document.querySelector('.hamburger');
+                if (menu.classList.contains('active')) {
+                  menu.classList.remove('active');
+                  hamburger.classList.remove('active');
+                }
+              });
+            });
+            
+            // Set initial active state
+            setActiveNav('feed');
+          });
+        </script>
 
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/korean-family-tree.js"></script>
