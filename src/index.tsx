@@ -4,6 +4,7 @@ import { serveStatic } from 'hono/cloudflare-workers'
 
 type Bindings = {
   DB: D1Database;
+  IMAGES: R2Bucket;
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -2012,6 +2013,16 @@ app.get('/', (c) => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <title>CHON Village - 프로페셔널 네트워킹 플랫폼</title>
+        
+        <!-- PWA Meta Tags -->
+        <meta name="description" content="프로페셔널 네트워킹 플랫폼 - 연결하고, 공유하고, 성장하세요">
+        <meta name="theme-color" content="#3b82f6">
+        <link rel="manifest" href="/manifest.json">
+        <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <meta name="apple-mobile-web-app-title" content="CHON Village">
+        
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <link href="/static/style.css" rel="stylesheet">
@@ -2191,6 +2202,11 @@ app.get('/', (c) => {
                         <input type="text" id="searchInput" placeholder="검색..." class="search-input">
                     </div>
                     
+                    <!-- Dark Mode Toggle -->
+                    <button onclick="toggleDarkMode()" class="notification-btn" title="다크 모드 전환">
+                        <i id="darkModeIcon" class="fas fa-moon"></i>
+                    </button>
+                    
                     <!-- Notifications (Desktop - toggle sidebar) -->
                     <button onclick="toggleNotificationSidebar()" class="notification-btn hidden md:flex">
                         <i class="fas fa-bell"></i>
@@ -2301,6 +2317,31 @@ app.get('/', (c) => {
         </nav>
 
         <script>
+          // Dark mode management
+          function initDarkMode() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateDarkModeIcon(savedTheme);
+          }
+
+          function toggleDarkMode() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateDarkModeIcon(newTheme);
+          }
+
+          function updateDarkModeIcon(theme) {
+            const icon = document.getElementById('darkModeIcon');
+            if (icon) {
+              icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            }
+          }
+
+          // Initialize dark mode on page load
+          initDarkMode();
+          
           // Mobile menu toggle
           function toggleMobileMenu() {
             const menu = document.getElementById('mobileMenu');
@@ -2366,15 +2407,107 @@ app.get('/', (c) => {
 
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="https://d3js.org/d3.v7.min.js"></script>
-        <script src="/static/korean-family-tree.js"></script>
-        <script src="/static/family-network.js"></script>
-        <script src="/static/dynamic-network.js"></script>
-        <script src="/static/nodes.js"></script>
-        <script src="/static/profile-edit.js"></script>
-        <script src="/static/family-advanced.js"></script>
-        <script src="/static/notifications.js"></script>
-        <script src="/static/posts.js"></script>
-        <script src="/static/app.js"></script>
+        <script src="/static/performance.js"></script>
+        <script src="/static/korean-family-tree.js" defer></script>
+        <script src="/static/family-network.js" defer></script>
+        <script src="/static/dynamic-network.js" defer></script>
+        <script src="/static/nodes.js" defer></script>
+        <script src="/static/profile-edit.js" defer></script>
+        <script src="/static/family-advanced.js" defer></script>
+        <script src="/static/notifications.js" defer></script>
+        <script src="/static/posts.js" defer></script>
+        <script src="/static/app.js" defer></script>
+        
+        <!-- PWA Service Worker Registration -->
+        <script>
+          // Register service worker
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+              navigator.serviceWorker.register('/sw.js')
+                .then((registration) => {
+                  console.log('[PWA] Service Worker registered:', registration.scope);
+                  
+                  // Check for updates every hour
+                  setInterval(() => {
+                    registration.update();
+                  }, 60 * 60 * 1000);
+                  
+                  // Handle updates
+                  registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    newWorker.addEventListener('statechange', () => {
+                      if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        // Show update notification
+                        if (confirm('새 버전이 있습니다. 업데이트하시겠습니까?')) {
+                          newWorker.postMessage({ type: 'SKIP_WAITING' });
+                          window.location.reload();
+                        }
+                      }
+                    });
+                  });
+                })
+                .catch((error) => {
+                  console.error('[PWA] Service Worker registration failed:', error);
+                });
+            });
+
+            // Handle controller change (after update)
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+              console.log('[PWA] New service worker activated');
+            });
+          }
+
+          // Install prompt
+          let deferredPrompt;
+          window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button
+            const installBtn = document.createElement('button');
+            installBtn.className = 'btn btn-primary';
+            installBtn.innerHTML = '<i class="fas fa-download mr-2"></i>앱 설치';
+            installBtn.style.cssText = 'position: fixed; bottom: calc(var(--mobile-nav-height) + 1rem); right: 1rem; z-index: 1000; box-shadow: var(--shadow-xl);';
+            installBtn.onclick = async () => {
+              deferredPrompt.prompt();
+              const { outcome } = await deferredPrompt.userChoice;
+              console.log('[PWA] Install prompt outcome:', outcome);
+              deferredPrompt = null;
+              installBtn.remove();
+            };
+            
+            document.body.appendChild(installBtn);
+            
+            // Auto-hide after 10 seconds
+            setTimeout(() => {
+              if (installBtn.parentNode) {
+                installBtn.style.opacity = '0';
+                installBtn.style.transition = 'opacity 0.5s';
+                setTimeout(() => installBtn.remove(), 500);
+              }
+            }, 10000);
+          });
+
+          // Track installation
+          window.addEventListener('appinstalled', () => {
+            console.log('[PWA] App installed successfully');
+            deferredPrompt = null;
+          });
+
+          // Online/Offline detection
+          window.addEventListener('online', () => {
+            console.log('[PWA] Back online');
+            document.body.style.borderTop = '3px solid var(--success)';
+            setTimeout(() => {
+              document.body.style.borderTop = '';
+            }, 3000);
+          });
+
+          window.addEventListener('offline', () => {
+            console.log('[PWA] Offline mode');
+            document.body.style.borderTop = '3px solid var(--warning)';
+          });
+        </script>
     </body>
     </html>
   `)
@@ -2891,6 +3024,158 @@ app.post('/api/messages', async (c) => {
   return c.json({ success: true, message_id: result.meta.last_row_id })
 })
 
+// ============================================
+// Real-time Notifications (Server-Sent Events)
+// ============================================
+
+// SSE endpoint for real-time notifications
+app.get('/api/notifications/stream', async (c) => {
+  const { DB } = c.env
+  const userId = 1 // TODO: Get from auth
+
+  // Create a readable stream for SSE
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder()
+      
+      // Send initial connection message
+      const connectedMsg = JSON.stringify({ type: 'connected', message: 'Connected to notification stream' })
+      controller.enqueue(encoder.encode('data: ' + connectedMsg + '\\n\\n'))
+
+      // Poll for new notifications every 10 seconds
+      const intervalId = setInterval(async () => {
+        try {
+          const query = 'SELECT * FROM notifications WHERE user_id = ? AND is_read = 0 ORDER BY created_at DESC LIMIT 10'
+          const { results } = await DB.prepare(query).bind(userId).all()
+
+          if (results.length > 0) {
+            const data = JSON.stringify({
+              type: 'notifications',
+              count: results.length,
+              notifications: results
+            })
+            controller.enqueue(encoder.encode('data: ' + data + '\\n\\n'))
+          }
+
+          // Send heartbeat to keep connection alive
+          controller.enqueue(encoder.encode(':\\n\\n'))
+        } catch (error) {
+          console.error('SSE error:', error)
+        }
+      }, 10000) // Poll every 10 seconds
+
+      // Cleanup on close
+      setTimeout(() => {
+        clearInterval(intervalId)
+        controller.close()
+      }, 300000) // Close after 5 minutes, client will reconnect
+    }
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    }
+  })
+})
+
+// ============================================
+// Image Upload API (Cloudflare R2)
+// ============================================
+
+// Upload image to R2
+app.post('/api/upload/image', async (c) => {
+  const { IMAGES } = c.env
+  
+  try {
+    const formData = await c.req.formData()
+    const file = formData.get('file') as File
+    
+    if (!file) {
+      return c.json({ error: 'No file provided' }, 400)
+    }
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    if (!validTypes.includes(file.type)) {
+      return c.json({ error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.' }, 400)
+    }
+
+    // Validate file size (5MB max)
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxSize) {
+      return c.json({ error: 'File too large. Maximum size is 5MB.' }, 400)
+    }
+
+    // Generate unique filename
+    const timestamp = Date.now()
+    const randomStr = Math.random().toString(36).substring(2, 15)
+    const extension = file.name.split('.').pop()
+    const filename = timestamp + '-' + randomStr + '.' + extension
+    const key = 'uploads/' + filename
+
+    // Upload to R2
+    const arrayBuffer = await file.arrayBuffer()
+    await IMAGES.put(key, arrayBuffer, {
+      httpMetadata: {
+        contentType: file.type,
+      }
+    })
+
+    // Return public URL (for development, adjust domain for production)
+    const imageUrl = '/api/images/' + key
+
+    return c.json({ 
+      success: true, 
+      url: imageUrl,
+      filename: filename
+    })
+  } catch (error) {
+    console.error('Upload error:', error)
+    return c.json({ error: 'Failed to upload image' }, 500)
+  }
+})
+
+// Serve image from R2
+app.get('/api/images/*', async (c) => {
+  const { IMAGES } = c.env
+  const key = c.req.path.replace('/api/images/', '')
+  
+  try {
+    const object = await IMAGES.get(key)
+    
+    if (!object) {
+      return c.json({ error: 'Image not found' }, 404)
+    }
+
+    return new Response(object.body, {
+      headers: {
+        'Content-Type': object.httpMetadata?.contentType || 'image/jpeg',
+        'Cache-Control': 'public, max-age=31536000',
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching image:', error)
+    return c.json({ error: 'Failed to fetch image' }, 500)
+  }
+})
+
+// Delete image from R2
+app.delete('/api/images/*', async (c) => {
+  const { IMAGES } = c.env
+  const key = c.req.path.replace('/api/images/', '')
+  
+  try {
+    await IMAGES.delete(key)
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting image:', error)
+    return c.json({ error: 'Failed to delete image' }, 500)
+  }
+})
+
 // Profile Edit Page
 app.get('/profile/edit', (c) => {
   return c.html(`
@@ -2939,12 +3224,21 @@ app.get('/profile/edit', (c) => {
                         <img id="previewAvatar" src="https://i.pravatar.cc/150?img=1" 
                              class="avatar" style="width: 120px; height: 120px; border: 4px solid var(--primary-100);">
                         <div class="flex-1">
-                            <button class="btn btn-primary mb-3">
+                            <input type="file" id="avatarInput" accept="image/jpeg,image/png,image/gif,image/webp" 
+                                   style="display: none;">
+                            <button type="button" onclick="document.getElementById('avatarInput').click()" 
+                                    class="btn btn-primary mb-3" id="uploadBtn">
                                 <i class="fas fa-camera mr-2"></i>사진 변경
                             </button>
                             <p style="font-size: var(--text-sm); color: var(--gray-600);">
-                                JPG, PNG 파일 (최대 5MB)
+                                JPG, PNG, GIF, WebP (최대 5MB)
                             </p>
+                            <div id="uploadProgress" style="display: none; margin-top: 0.5rem;">
+                                <div style="width: 100%; height: 4px; background: var(--gray-200); border-radius: 2px; overflow: hidden;">
+                                    <div id="progressBar" style="width: 0%; height: 100%; background: var(--primary-600); transition: width 0.3s;"></div>
+                                </div>
+                                <p id="uploadStatus" style="font-size: var(--text-xs); color: var(--gray-600); margin-top: 0.25rem;">업로드 중...</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3152,18 +3446,75 @@ app.get('/profile/edit', (c) => {
             \`).join('');
           }
 
+          let uploadedImageUrl = null;
+
           function setupFormHandlers() {
+            // Image upload handler
+            document.getElementById('avatarInput').addEventListener('change', async (e) => {
+              const file = e.target.files[0];
+              if (!file) return;
+
+              const uploadBtn = document.getElementById('uploadBtn');
+              const uploadProgress = document.getElementById('uploadProgress');
+              const progressBar = document.getElementById('progressBar');
+              const uploadStatus = document.getElementById('uploadStatus');
+
+              try {
+                // Show progress
+                uploadBtn.disabled = true;
+                uploadProgress.style.display = 'block';
+                progressBar.style.width = '30%';
+
+                // Create form data
+                const formData = new FormData();
+                formData.append('file', file);
+
+                // Upload
+                progressBar.style.width = '60%';
+                const response = await axios.post('/api/upload/image', formData, {
+                  headers: { 'Content-Type': 'multipart/form-data' }
+                });
+
+                progressBar.style.width = '100%';
+                uploadedImageUrl = response.data.url;
+
+                // Update preview
+                document.getElementById('previewAvatar').src = uploadedImageUrl;
+                uploadStatus.textContent = '업로드 완료!';
+                uploadStatus.style.color = 'var(--success)';
+
+                setTimeout(() => {
+                  uploadProgress.style.display = 'none';
+                  progressBar.style.width = '0%';
+                  uploadBtn.disabled = false;
+                }, 2000);
+              } catch (error) {
+                console.error('Upload error:', error);
+                uploadStatus.textContent = error.response?.data?.error || '업로드 실패';
+                uploadStatus.style.color = 'var(--error)';
+                uploadBtn.disabled = false;
+              }
+            });
+
+            // Form submit handler
             document.getElementById('basicInfoForm').addEventListener('submit', async (e) => {
               e.preventDefault();
               
               try {
                 const currentUser = JSON.parse(localStorage.getItem('user')) || { id: 1 };
                 
-                await axios.put(\`/api/users/\${currentUser.id}\`, {
+                const userData = {
                   full_name: document.getElementById('fullName').value,
                   headline: document.getElementById('headline').value,
                   email: document.getElementById('email').value
-                });
+                };
+
+                // Include profile image if uploaded
+                if (uploadedImageUrl) {
+                  userData.profile_image = uploadedImageUrl;
+                }
+
+                await axios.put(\`/api/users/\${currentUser.id}\`, userData);
 
                 await axios.put(\`/api/users/\${currentUser.id}/profile\`, {
                   about: document.getElementById('about').value,

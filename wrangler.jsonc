@@ -16,5 +16,15 @@
       "database_name": "webapp-production",
       "database_id": "placeholder-will-be-set-on-production-deploy"
     }
+  ],
+
+  // R2 Storage configuration
+  // For production deployment, create the bucket with:
+  // npx wrangler r2 bucket create webapp-images
+  "r2_buckets": [
+    {
+      "binding": "IMAGES",
+      "bucket_name": "webapp-images"
+    }
   ]
 }

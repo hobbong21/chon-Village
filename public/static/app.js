@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadPage('feed');
   setupEventListeners();
   loadSidebarNotifications();
+  initRealtimeNotifications();
 });
 
 // Update user profile in sidebar
@@ -206,6 +207,98 @@ async function markAllAsRead() {
     console.error('Error marking all as read:', error);
   }
 }
+
+// Real-time notifications with Server-Sent Events
+let eventSource = null;
+let reconnectTimeout = null;
+
+function initRealtimeNotifications() {
+  if (!window.EventSource) {
+    console.warn('[Realtime] EventSource not supported');
+    return;
+  }
+
+  connectEventSource();
+}
+
+function connectEventSource() {
+  // Close existing connection
+  if (eventSource) {
+    eventSource.close();
+  }
+
+  console.log('[Realtime] Connecting to notification stream...');
+  eventSource = new EventSource('/api/notifications/stream');
+
+  eventSource.onopen = () => {
+    console.log('[Realtime] Connected to notification stream');
+  };
+
+  eventSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      
+      if (data.type === 'connected') {
+        console.log('[Realtime]', data.message);
+      } else if (data.type === 'notifications') {
+        console.log('[Realtime] Received notifications:', data.count);
+        
+        // Refresh sidebar notifications
+        loadSidebarNotifications();
+        
+        // Show browser notification if permission granted
+        if (Notification.permission === 'granted' && data.notifications.length > 0) {
+          const latest = data.notifications[0];
+          new Notification('CHON Village', {
+            body: latest.message,
+            icon: '/static/icons/icon-192x192.png',
+            badge: '/static/icons/icon-72x72.png',
+            tag: `notification-${latest.id}`
+          });
+        }
+      }
+    } catch (error) {
+      console.error('[Realtime] Error parsing message:', error);
+    }
+  };
+
+  eventSource.onerror = (error) => {
+    console.error('[Realtime] Connection error:', error);
+    eventSource.close();
+    
+    // Reconnect after 5 seconds
+    if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    reconnectTimeout = setTimeout(() => {
+      console.log('[Realtime] Reconnecting...');
+      connectEventSource();
+    }, 5000);
+  };
+}
+
+// Request notification permission
+function requestNotificationPermission() {
+  if (!('Notification' in window)) {
+    console.warn('[Notifications] Not supported');
+    return;
+  }
+
+  if (Notification.permission === 'default') {
+    Notification.requestPermission().then((permission) => {
+      console.log('[Notifications] Permission:', permission);
+      if (permission === 'granted') {
+        new Notification('CHON Village', {
+          body: '알림이 활성화되었습니다!',
+          icon: '/static/icons/icon-192x192.png'
+        });
+      }
+    });
+  }
+}
+
+// Call this after user interaction (e.g., on first button click)
+setTimeout(() => {
+  requestNotificationPermission();
+}, 3000);
 
 // Setup event listeners
 function setupEventListeners() {

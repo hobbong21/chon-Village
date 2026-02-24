@@ -15,6 +15,16 @@
   --primary-800: #1e40af;
   --primary-900: #1e3a8a;
   
+  /* Light Mode Colors */
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --border-color: #e5e7eb;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  
   /* Neutral Colors */
   --gray-50: #f9fafb;
   --gray-100: #f3f4f6;
@@ -93,6 +103,31 @@
   --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Dark Mode */
+[data-theme="dark"] {
+  /* Dark Mode Colors */
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --border-color: #334155;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  
+  /* Adjust neutrals for dark mode */
+  --gray-50: #1e293b;
+  --gray-100: #334155;
+  --gray-200: #475569;
+  --gray-300: #64748b;
+  --gray-400: #94a3b8;
+  --gray-500: #cbd5e1;
+  --gray-600: #e2e8f0;
+  --gray-700: #f1f5f9;
+  --gray-800: #f8fafc;
+  --gray-900: #ffffff;
+}
+
 /* ========================================
    Global Styles
    ======================================== */
@@ -108,12 +143,13 @@ body {
   font-size: var(--text-base);
   font-weight: var(--font-regular);
   line-height: 1.6;
-  color: var(--gray-800);
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  color: var(--text-primary);
+  background: var(--bg-primary);
   min-height: 100vh;
   padding-bottom: calc(var(--mobile-nav-height) + var(--spacing-4));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color var(--transition-base), color var(--transition-base);
 }
 
 @media (min-width: 768px) {
@@ -165,11 +201,12 @@ a:hover {
   left: 0;
   right: 0;
   height: var(--header-height);
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--bg-secondary);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--gray-200);
+  border-bottom: 1px solid var(--border-color);
   z-index: 100;
   box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
 }
 
 .header-container {
@@ -508,11 +545,11 @@ a:hover {
    ======================================== */
 
 .card {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: var(--radius-xl);
   padding: var(--spacing-6);
   box-shadow: var(--shadow-md);
-  border: 1px solid var(--gray-200);
+  border: 1px solid var(--border-color);
   transition: all var(--transition-base);
 }
 
