@@ -2191,10 +2191,16 @@ app.get('/', (c) => {
                         <input type="text" id="searchInput" placeholder="검색..." class="search-input">
                     </div>
                     
-                    <!-- Notifications -->
-                    <button onclick="showNotificationCenter()" class="notification-btn">
+                    <!-- Notifications (Desktop - toggle sidebar) -->
+                    <button onclick="toggleNotificationSidebar()" class="notification-btn hidden md:flex">
                         <i class="fas fa-bell"></i>
-                        <span class="notification-badge hidden">0</span>
+                        <span id="notificationBadge" class="notification-badge hidden">0</span>
+                    </button>
+                    
+                    <!-- Notifications (Mobile - show modal) -->
+                    <button onclick="showNotificationCenter()" class="notification-btn md:hidden">
+                        <i class="fas fa-bell"></i>
+                        <span id="notificationBadgeMobile" class="notification-badge hidden">0</span>
                     </button>
                     
                     <!-- Hamburger Menu (Mobile) -->
@@ -2224,9 +2230,57 @@ app.get('/', (c) => {
 
         <!-- Main Content -->
         <div class="main-container">
-            <div class="grid">
+            <div class="content-grid">
+                <!-- Left Sidebar (Desktop) - Reserved for future use -->
+                <aside class="left-sidebar hidden lg:block">
+                    <!-- Quick Profile Card -->
+                    <div class="card" style="position: sticky; top: calc(var(--header-height) + 1.5rem);">
+                        <div class="text-center">
+                            <img id="sidebarAvatar" src="https://i.pravatar.cc/150?img=1" 
+                                 class="avatar avatar-xl mx-auto mb-4" style="border: 3px solid var(--primary-100);">
+                            <h4 id="sidebarName" style="font-weight: var(--font-bold); margin-bottom: 0.25rem;">John Doe</h4>
+                            <p id="sidebarHeadline" style="font-size: var(--text-sm); color: var(--gray-600);">전문가</p>
+                            
+                            <div class="divider" style="margin: 1rem 0;"></div>
+                            
+                            <div style="display: flex; justify-content: space-around; font-size: var(--text-sm);">
+                                <div>
+                                    <div style="font-weight: var(--font-bold); color: var(--primary-600);">523</div>
+                                    <div style="color: var(--gray-600); font-size: var(--text-xs);">연결</div>
+                                </div>
+                                <div>
+                                    <div style="font-weight: var(--font-bold); color: var(--primary-600);">1.2K</div>
+                                    <div style="color: var(--gray-600); font-size: var(--text-xs);">조회</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+                
                 <!-- Main Content Area -->
-                <div id="mainContent"></div>
+                <main class="main-content">
+                    <div id="mainContent"></div>
+                </main>
+                
+                <!-- Right Sidebar (Desktop) - Notifications -->
+                <aside id="rightSidebar" class="right-sidebar hidden lg:block">
+                    <div class="card" style="position: sticky; top: calc(var(--header-height) + 1.5rem);">
+                        <div class="card-header" style="margin-bottom: 1rem;">
+                            <h3 class="card-title" style="font-size: var(--text-lg);">
+                                <i class="fas fa-bell mr-2"></i>알림
+                            </h3>
+                            <button onclick="markAllAsRead()" class="btn btn-ghost btn-sm" style="padding: 0.25rem 0.5rem;">
+                                <i class="fas fa-check-double"></i>
+                            </button>
+                        </div>
+                        
+                        <div id="sidebarNotifications" style="max-height: calc(100vh - var(--header-height) - 12rem); overflow-y: auto;">
+                            <div class="loading">
+                                <div class="loading-spinner" style="width: 32px; height: 32px; border-width: 3px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
             </div>
         </div>
         
@@ -2253,6 +2307,15 @@ app.get('/', (c) => {
             const hamburger = document.querySelector('.hamburger');
             menu.classList.toggle('active');
             hamburger.classList.toggle('active');
+          }
+          
+          // Toggle notification sidebar (for future use if needed)
+          function toggleNotificationSidebar() {
+            // Currently always visible on desktop, but can add toggle logic here
+            const sidebar = document.getElementById('rightSidebar');
+            if (sidebar) {
+              sidebar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
           }
           
           // Mobile navigation active state
@@ -2826,6 +2889,300 @@ app.post('/api/messages', async (c) => {
   `).bind(receiver_id, content.substring(0, 100), result.meta.last_row_id).run()
   
   return c.json({ success: true, message_id: result.meta.last_row_id })
+})
+
+// Profile Edit Page
+app.get('/profile/edit', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>프로필 편집 - CHON Village</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <link href="/static/style.css" rel="stylesheet">
+    </head>
+    <body>
+        <!-- Header -->
+        <header class="header">
+            <div class="header-container">
+                <a href="/" class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-network-wired"></i>
+                    </div>
+                    <span class="hidden sm:inline">CHON Village</span>
+                </a>
+                
+                <div class="flex items-center gap-3">
+                    <a href="/" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        <span class="hidden sm:inline">돌아가기</span>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-container">
+            <div style="max-width: 800px; margin: 0 auto;">
+                <h1 style="margin-bottom: var(--spacing-6);">
+                    <i class="fas fa-user-edit mr-3" style="color: var(--primary-600);"></i>
+                    프로필 편집
+                </h1>
+
+                <!-- Profile Picture -->
+                <div class="card">
+                    <h2 class="card-title" style="margin-bottom: var(--spacing-4);">프로필 사진</h2>
+                    <div class="flex items-center gap-6">
+                        <img id="previewAvatar" src="https://i.pravatar.cc/150?img=1" 
+                             class="avatar" style="width: 120px; height: 120px; border: 4px solid var(--primary-100);">
+                        <div class="flex-1">
+                            <button class="btn btn-primary mb-3">
+                                <i class="fas fa-camera mr-2"></i>사진 변경
+                            </button>
+                            <p style="font-size: var(--text-sm); color: var(--gray-600);">
+                                JPG, PNG 파일 (최대 5MB)
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Basic Information -->
+                <div class="card">
+                    <h2 class="card-title" style="margin-bottom: var(--spacing-4);">기본 정보</h2>
+                    
+                    <form id="basicInfoForm">
+                        <div class="form-group">
+                            <label class="form-label">이름 *</label>
+                            <input type="text" id="fullName" class="form-input" placeholder="홍길동" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">한줄 소개 *</label>
+                            <input type="text" id="headline" class="form-input" 
+                                   placeholder="예: 소프트웨어 엔지니어 at Google" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">이메일</label>
+                            <input type="email" id="email" class="form-input" placeholder="your@email.com">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">위치</label>
+                            <input type="text" id="location" class="form-input" placeholder="서울, 대한민국">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">웹사이트</label>
+                            <input type="url" id="website" class="form-input" placeholder="https://yourwebsite.com">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">자기소개</label>
+                            <textarea id="about" class="form-textarea" rows="6" 
+                                      placeholder="자신에 대해 소개해주세요..."></textarea>
+                            <div class="form-help">최대 2000자</div>
+                        </div>
+                        
+                        <div class="flex gap-3 justify-end">
+                            <a href="/" class="btn btn-secondary">취소</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save mr-2"></i>저장
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Experience Section -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">경력</h2>
+                        <button onclick="showAddExperienceModal()" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus mr-2"></i>추가
+                        </button>
+                    </div>
+                    
+                    <div id="experienceList">
+                        <div class="empty-state">
+                            <i class="fas fa-briefcase"></i>
+                            <p>등록된 경력이 없습니다.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Education Section -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">학력</h2>
+                        <button onclick="showAddEducationModal()" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus mr-2"></i>추가
+                        </button>
+                    </div>
+                    
+                    <div id="educationList">
+                        <div class="empty-state">
+                            <i class="fas fa-graduation-cap"></i>
+                            <p>등록된 학력이 없습니다.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Skills Section -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">스킬</h2>
+                        <button onclick="showAddSkillModal()" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus mr-2"></i>추가
+                        </button>
+                    </div>
+                    
+                    <div id="skillsList" class="flex flex-wrap gap-2">
+                        <div class="empty-state" style="width: 100%;">
+                            <i class="fas fa-star"></i>
+                            <p>등록된 스킬이 없습니다.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <script src="/static/profile-edit.js"></script>
+        <script>
+          // Initialize profile edit page
+          document.addEventListener('DOMContentLoaded', () => {
+            loadProfileData();
+            setupFormHandlers();
+          });
+
+          async function loadProfileData() {
+            try {
+              const currentUser = JSON.parse(localStorage.getItem('user')) || { id: 1 };
+              
+              const [userRes, expRes, eduRes, skillsRes] = await Promise.all([
+                axios.get(\`/api/users/\${currentUser.id}\`),
+                axios.get(\`/api/users/\${currentUser.id}/experiences\`),
+                axios.get(\`/api/users/\${currentUser.id}/education\`),
+                axios.get(\`/api/users/\${currentUser.id}/skills\`)
+              ]);
+
+              const user = userRes.data.user;
+              
+              // Populate form
+              document.getElementById('fullName').value = user.full_name || '';
+              document.getElementById('headline').value = user.headline || '';
+              document.getElementById('email').value = user.email || '';
+              document.getElementById('location').value = user.location || '';
+              document.getElementById('website').value = user.website || '';
+              document.getElementById('about').value = user.about || '';
+              document.getElementById('previewAvatar').src = user.profile_image || 'https://i.pravatar.cc/150?img=1';
+
+              // Display experiences
+              displayExperiences(expRes.data.experiences);
+              displayEducation(eduRes.data.education);
+              displaySkills(skillsRes.data.skills);
+            } catch (error) {
+              console.error('Error loading profile:', error);
+            }
+          }
+
+          function displayExperiences(experiences) {
+            const container = document.getElementById('experienceList');
+            if (experiences.length === 0) return;
+
+            container.innerHTML = experiences.map(exp => \`
+              <div class="flex gap-4 p-4" style="border-bottom: 1px solid var(--gray-200);">
+                <div style="width: 48px; height: 48px; background: var(--primary-100); border-radius: var(--radius-md); 
+                            display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                  <i class="fas fa-building" style="color: var(--primary-600);"></i>
+                </div>
+                <div class="flex-1">
+                  <h4 style="font-weight: var(--font-semibold);">\${exp.position}</h4>
+                  <p style="color: var(--gray-600);">\${exp.company}</p>
+                  <p style="font-size: var(--text-sm); color: var(--gray-500); margin-top: 0.25rem;">
+                    \${exp.start_date} - \${exp.is_current ? '현재' : exp.end_date}
+                  </p>
+                </div>
+                <button onclick="deleteExperience(\${exp.id})" class="btn btn-ghost btn-sm" style="color: var(--error);">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            \`).join('');
+          }
+
+          function displayEducation(education) {
+            const container = document.getElementById('educationList');
+            if (education.length === 0) return;
+
+            container.innerHTML = education.map(edu => \`
+              <div class="flex gap-4 p-4" style="border-bottom: 1px solid var(--gray-200);">
+                <div style="width: 48px; height: 48px; background: var(--success-light); border-radius: var(--radius-md); 
+                            display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                  <i class="fas fa-graduation-cap" style="color: var(--success);"></i>
+                </div>
+                <div class="flex-1">
+                  <h4 style="font-weight: var(--font-semibold);">\${edu.school}</h4>
+                  <p style="color: var(--gray-600);">\${edu.degree} - \${edu.field_of_study}</p>
+                  <p style="font-size: var(--text-sm); color: var(--gray-500); margin-top: 0.25rem;">
+                    \${edu.start_date} - \${edu.end_date}
+                  </p>
+                </div>
+                <button onclick="deleteEducation(\${edu.id})" class="btn btn-ghost btn-sm" style="color: var(--error);">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            \`).join('');
+          }
+
+          function displaySkills(skills) {
+            const container = document.getElementById('skillsList');
+            if (skills.length === 0) return;
+
+            container.innerHTML = skills.map(skill => \`
+              <div class="badge badge-primary" style="padding: 0.5rem 1rem; font-size: var(--text-sm);">
+                \${skill.skill_name}
+                <span style="margin-left: 0.5rem; color: var(--primary-700);">\${skill.endorsements}</span>
+                <button onclick="deleteSkill(\${skill.id})" style="margin-left: 0.5rem; color: var(--error);">
+                  <i class="fas fa-times text-xs"></i>
+                </button>
+              </div>
+            \`).join('');
+          }
+
+          function setupFormHandlers() {
+            document.getElementById('basicInfoForm').addEventListener('submit', async (e) => {
+              e.preventDefault();
+              
+              try {
+                const currentUser = JSON.parse(localStorage.getItem('user')) || { id: 1 };
+                
+                await axios.put(\`/api/users/\${currentUser.id}\`, {
+                  full_name: document.getElementById('fullName').value,
+                  headline: document.getElementById('headline').value,
+                  email: document.getElementById('email').value
+                });
+
+                await axios.put(\`/api/users/\${currentUser.id}/profile\`, {
+                  about: document.getElementById('about').value,
+                  location: document.getElementById('location').value,
+                  website: document.getElementById('website').value
+                });
+
+                alert('프로필이 저장되었습니다!');
+                window.location.href = '/';
+              } catch (error) {
+                console.error('Error saving profile:', error);
+                alert('프로필 저장에 실패했습니다.');
+              }
+            });
+          }
+        </script>
+    </body>
+    </html>
+  `)
 })
 
 export default app

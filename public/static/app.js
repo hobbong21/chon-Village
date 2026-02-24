@@ -16,9 +16,10 @@ let posts = [];
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
   updateUserProfile();
+  updateSidebarProfile();
   loadPage('feed');
   setupEventListeners();
-  loadSuggestedConnections();
+  loadSidebarNotifications();
 });
 
 // Update user profile in sidebar
@@ -30,6 +31,179 @@ function updateUserProfile() {
       profileCard.querySelector('h3').textContent = currentUser.full_name;
       profileCard.querySelector('p').textContent = currentUser.headline || '전문가';
     }
+  }
+}
+
+// Update left sidebar profile
+function updateSidebarProfile() {
+  if (currentUser) {
+    const avatar = document.getElementById('sidebarAvatar');
+    const name = document.getElementById('sidebarName');
+    const headline = document.getElementById('sidebarHeadline');
+    
+    if (avatar) avatar.src = currentUser.profile_image || 'https://i.pravatar.cc/150?img=1';
+    if (name) name.textContent = currentUser.full_name;
+    if (headline) headline.textContent = currentUser.headline || '전문가';
+  }
+}
+
+// Load notifications in right sidebar
+async function loadSidebarNotifications() {
+  const container = document.getElementById('sidebarNotifications');
+  if (!container) return;
+
+  try {
+    const response = await axios.get('/api/notifications');
+    const notifications = response.data.notifications;
+
+    // Update badge
+    const unreadCount = notifications.filter(n => !n.is_read).length;
+    const badge = document.getElementById('notificationBadge');
+    const badgeMobile = document.getElementById('notificationBadgeMobile');
+    
+    if (unreadCount > 0) {
+      if (badge) {
+        badge.classList.remove('hidden');
+        badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+      }
+      if (badgeMobile) {
+        badgeMobile.classList.remove('hidden');
+        badgeMobile.textContent = unreadCount > 9 ? '9+' : unreadCount;
+      }
+    } else {
+      if (badge) badge.classList.add('hidden');
+      if (badgeMobile) badgeMobile.classList.add('hidden');
+    }
+
+    if (notifications.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="padding: 2rem 1rem;">
+          <i class="fas fa-bell-slash"></i>
+          <p style="margin-top: 0.5rem;">알림이 없습니다</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = notifications.map(notif => {
+      const icon = getNotificationIcon(notif.type);
+      const bgColor = notif.is_read ? 'var(--gray-50)' : 'var(--primary-50)';
+      
+      return `
+        <div onclick="handleNotificationClick(${notif.id}, '${notif.type}', ${notif.related_id})" 
+             style="padding: 0.75rem; border-bottom: 1px solid var(--gray-200); 
+                    background: ${bgColor}; cursor: pointer; transition: all 0.15s;"
+             onmouseover="this.style.background='var(--gray-100)'"
+             onmouseout="this.style.background='${bgColor}'">
+          <div class="flex gap-3">
+            <div style="flex-shrink: 0;">
+              <div style="width: 40px; height: 40px; background: var(--primary-100); 
+                          border-radius: var(--radius-full); display: flex; 
+                          align-items: center; justify-content: center;">
+                <i class="${icon}" style="color: var(--primary-600);"></i>
+              </div>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <p style="font-size: var(--text-sm); color: var(--gray-800); 
+                        font-weight: ${notif.is_read ? 'var(--font-regular)' : 'var(--font-semibold)'}; 
+                        line-height: 1.4; margin-bottom: 0.25rem;">
+                ${notif.message}
+              </p>
+              <p style="font-size: var(--text-xs); color: var(--gray-500);">
+                ${formatTimeAgo(notif.created_at)}
+              </p>
+            </div>
+            ${!notif.is_read ? `
+              <div style="flex-shrink: 0;">
+                <div style="width: 8px; height: 8px; background: var(--primary-600); 
+                            border-radius: var(--radius-full);"></div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (error) {
+    console.error('Error loading sidebar notifications:', error);
+    container.innerHTML = `
+      <div class="empty-state" style="padding: 2rem 1rem;">
+        <i class="fas fa-exclamation-circle" style="color: var(--error);"></i>
+        <p style="margin-top: 0.5rem; color: var(--error);">알림을 불러올 수 없습니다</p>
+      </div>
+    `;
+  }
+}
+
+function getNotificationIcon(type) {
+  const icons = {
+    'connection_request': 'fas fa-user-plus',
+    'connection_accepted': 'fas fa-user-check',
+    'post_like': 'fas fa-heart',
+    'post_comment': 'fas fa-comment',
+    'post_share': 'fas fa-share',
+    'node_invitation': 'fas fa-sitemap',
+    'family_invitation': 'fas fa-users',
+    'system': 'fas fa-info-circle'
+  };
+  return icons[type] || 'fas fa-bell';
+}
+
+function formatTimeAgo(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return '방금 전';
+  if (diffMins < 60) return `${diffMins}분 전`;
+  if (diffHours < 24) return `${diffHours}시간 전`;
+  if (diffDays < 7) return `${diffDays}일 전`;
+  return date.toLocaleDateString('ko-KR');
+}
+
+async function handleNotificationClick(notifId, type, relatedId) {
+  // Mark as read
+  try {
+    await axios.put(`/api/notifications/${notifId}/read`);
+    loadSidebarNotifications(); // Refresh
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+  }
+
+  // Navigate based on type
+  switch (type) {
+    case 'connection_request':
+    case 'connection_accepted':
+      loadProfile(relatedId);
+      break;
+    case 'post_like':
+    case 'post_comment':
+    case 'post_share':
+      loadPage('feed');
+      break;
+    case 'node_invitation':
+      loadPage('nodes');
+      break;
+    case 'family_invitation':
+      loadProfile(currentUser.id);
+      break;
+  }
+}
+
+async function markAllAsRead() {
+  try {
+    const response = await axios.get('/api/notifications');
+    const unreadNotifs = response.data.notifications.filter(n => !n.is_read);
+    
+    await Promise.all(
+      unreadNotifs.map(n => axios.put(`/api/notifications/${n.id}/read`))
+    );
+    
+    loadSidebarNotifications();
+  } catch (error) {
+    console.error('Error marking all as read:', error);
   }
 }
 
@@ -348,9 +522,9 @@ async function loadProfile(userId) {
                 ` : ''}
               </div>
               ${isOwnProfile ? `
-                <button onclick="showEditProfileModal()" class="btn-secondary">
+                <a href="/profile/edit" class="btn btn-primary">
                   <i class="fas fa-edit mr-1"></i>프로필 편집
-                </button>
+                </a>
               ` : ''}
             </div>
             ${!isOwnProfile ? `
