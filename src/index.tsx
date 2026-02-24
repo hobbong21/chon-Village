@@ -2011,9 +2011,10 @@ app.get('/', (c) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <title>CHON-Network - 전문가 네트워킹 플랫폼</title>
+        <title>CHON Village - 프로페셔널 네트워킹 플랫폼</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <link href="/static/style.css" rel="stylesheet">
         <style>
           /* Base styles */
           * {
@@ -2155,212 +2156,94 @@ app.get('/', (c) => {
           }
         </style>
     </head>
-    <body class="bg-gray-100">
+    <body>
         <!-- Top Navigation -->
-        <nav class="bg-white shadow-md sticky top-0 z-50">
-            <div class="max-w-7xl mx-auto px-4">
-                <div class="flex justify-between items-center h-16">
-                    <!-- Logo -->
-                    <div class="flex items-center">
-                        <h1 class="text-xl md:text-2xl font-bold text-blue-600">
-                            <i class="fas fa-network-wired mr-1 md:mr-2"></i>
-                            <span class="hidden sm:inline">CHON-Network</span>
-                            <span class="sm:hidden">CHON</span>
-                        </h1>
+        <header class="header">
+            <div class="header-container">
+                <!-- Logo -->
+                <a href="#" class="logo" data-page="feed">
+                    <div class="logo-icon">
+                        <i class="fas fa-network-wired"></i>
+                    </div>
+                    <span class="hidden sm:inline">CHON Village</span>
+                </a>
+                
+                <!-- Desktop Navigation -->
+                <nav class="nav-main">
+                    <a href="#" class="nav-link" data-page="feed">
+                        <i class="fas fa-home"></i>
+                        <span>홈</span>
+                    </a>
+                    <a href="#" class="nav-link" data-page="nodes">
+                        <i class="fas fa-sitemap"></i>
+                        <span>노드</span>
+                    </a>
+                    <a href="#" class="nav-link" data-page="profile">
+                        <i class="fas fa-user"></i>
+                        <span>프로필</span>
+                    </a>
+                </nav>
+                
+                <!-- Right Side Actions -->
+                <div class="nav-actions">
+                    <!-- Search (Desktop) -->
+                    <div class="search-desktop">
+                        <input type="text" id="searchInput" placeholder="검색..." class="search-input">
                     </div>
                     
-                    <!-- Desktop Navigation -->
-                    <div class="hidden md:flex items-center space-x-4">
-                        <a href="#" class="nav-link text-gray-700 hover:text-blue-600 transition" data-page="feed">
-                            <i class="fas fa-home mr-1"></i>홈
-                        </a>
-                        <a href="#" class="nav-link text-gray-700 hover:text-blue-600 transition" data-page="nodes">
-                            <i class="fas fa-sitemap mr-1"></i>노드
-                        </a>
-                        <a href="#" class="nav-link text-gray-700 hover:text-blue-600 transition" data-page="family">
-                            <i class="fas fa-users mr-1"></i>가족
-                        </a>
-                        <a href="#" class="nav-link text-gray-700 hover:text-blue-600 transition" data-page="profile">
-                            <i class="fas fa-user mr-1"></i>프로필
-                        </a>
-                    </div>
+                    <!-- Notifications -->
+                    <button onclick="showNotificationCenter()" class="notification-btn">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge hidden">0</span>
+                    </button>
                     
-                    <!-- Right Side Actions -->
-                    <div class="flex items-center space-x-2">
-                        <!-- Search (Desktop) -->
-                        <div class="hidden lg:block">
-                            <input type="text" id="searchInput" placeholder="사람 검색..." 
-                                   class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                        </div>
-                        
-                        <!-- Notifications -->
-                        <button onclick="showNotificationCenter()" class="p-2 text-gray-700 hover:text-blue-600 transition touch-target relative">
-                            <i class="fas fa-bell text-lg"></i>
-                            <span class="notification-badge hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">0</span>
-                        </button>
-                        
-                        <!-- Hamburger Menu (Mobile) -->
-                        <button class="hamburger md:hidden" onclick="toggleMobileMenu()">
-                            <div class="hamburger-line"></div>
-                            <div class="hamburger-line"></div>
-                            <div class="hamburger-line"></div>
-                        </button>
-                        
-                        <!-- Logout (Desktop) -->
-                        <a href="/login" id="logoutBtn" class="hidden md:block btn-secondary">
-                            <i class="fas fa-sign-out-alt mr-1"></i>로그아웃
-                        </a>
-                    </div>
+                    <!-- Hamburger Menu (Mobile) -->
+                    <button class="hamburger" onclick="toggleMobileMenu()">
+                        <div class="hamburger-line"></div>
+                        <div class="hamburger-line"></div>
+                        <div class="hamburger-line"></div>
+                    </button>
                 </div>
             </div>
             
             <!-- Mobile Menu -->
             <div id="mobileMenu" class="mobile-menu">
-                <div class="py-2">
-                    <!-- Search (Mobile) -->
-                    <div class="px-4 py-2">
-                        <input type="text" placeholder="사람 검색..." 
-                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                    </div>
-                    
-                    <!-- Family Menu Items -->
-                    <a href="#" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 transition" data-page="albums" onclick="toggleMobileMenu()">
-                        <i class="fas fa-images mr-2"></i>가족 앨범
-                    </a>
-                    <a href="#" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 transition" data-page="timeline" onclick="toggleMobileMenu()">
-                        <i class="fas fa-calendar-alt mr-2"></i>가족 타임라인
-                    </a>
-                    <a href="#" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 transition" data-page="invitations" onclick="toggleMobileMenu()">
-                        <i class="fas fa-link mr-2"></i>초대 링크
-                    </a>
-                    
-                    <div class="border-t my-2"></div>
-                    
-                    <!-- Logout -->
-                    <a href="/login" class="block px-4 py-3 text-red-600 hover:bg-red-50 transition">
-                        <i class="fas fa-sign-out-alt mr-2"></i>로그아웃
-                    </a>
+                <!-- Search (Mobile) -->
+                <div style="padding: 1rem;">
+                    <input type="text" placeholder="검색..." class="search-input">
                 </div>
+                
+                <div style="border-top: 1px solid var(--gray-200);"></div>
+                
+                <!-- Logout -->
+                <a href="/login" style="display: block; padding: 1rem; color: var(--error); font-weight: 500;">
+                    <i class="fas fa-sign-out-alt" style="margin-right: 0.5rem;"></i>로그아웃
+                </a>
             </div>
-        </nav>
+        </header>
 
         <!-- Main Content -->
-        <div class="max-w-7xl mx-auto px-2 sm:px-4 py-4 md:py-6">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
-                <!-- Left Sidebar (Hidden on Mobile) -->
-                <div class="hidden md:block md:col-span-3">
-                    <!-- Profile Card -->
-                    <div id="profileCard" class="card">
-                        <div class="text-center">
-                            <img src="https://i.pravatar.cc/150?img=1" 
-                                 class="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-blue-100">
-                            <h3 class="font-bold text-lg">John Doe</h3>
-                            <p class="text-gray-600 text-sm">Software Engineer at Tech Corp</p>
-                            <div class="mt-4 pt-4 border-t">
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-gray-600">연결</span>
-                                    <span class="font-bold text-blue-600">523</span>
-                                </div>
-                                <div class="flex justify-between text-sm mt-2">
-                                    <span class="text-gray-600">프로필 조회수</span>
-                                    <span class="font-bold text-blue-600">1,243</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Family Tree Card -->
-                    <div class="card mt-4">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="font-bold text-lg">
-                                <i class="fas fa-project-diagram mr-2 text-indigo-600"></i>
-                                가족 관계도
-                            </h3>
-                            <button onclick="toggleFamilyNetwork()" class="text-sm text-blue-600 hover:text-blue-800">
-                                <i class="fas fa-expand-alt"></i>
-                            </button>
-                        </div>
-                        
-                        <!-- Compact Family Network Visualization -->
-                        <div id="compactFamilyNetwork" class="relative" style="height: 300px;">
-                            <div class="text-center py-12 text-gray-400">
-                                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                                <p class="text-xs">로딩 중...</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Family Stats -->
-                        <div class="mt-4 pt-4 border-t text-sm">
-                            <div class="flex justify-between mb-2">
-                                <span class="text-gray-600">등록된 가족</span>
-                                <span id="familyMemberCount" class="font-bold text-indigo-600">-</span>
-                            </div>
-                            <div class="flex justify-between mb-2">
-                                <span class="text-gray-600">인증 완료</span>
-                                <span id="verifiedMemberCount" class="font-bold text-green-600">-</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">인증 대기</span>
-                                <span id="pendingMemberCount" class="font-bold text-yellow-600">-</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Action Buttons -->
-                        <div class="mt-4 pt-4 border-t flex gap-2">
-                            <button onclick="showAddMemberModal()" class="flex-1 px-3 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700">
-                                <i class="fas fa-plus mr-1"></i>가족 추가
-                            </button>
-                            <button onclick="viewFullFamilyTree()" class="flex-1 px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200">
-                                <i class="fas fa-sitemap mr-1"></i>전체 보기
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
+        <div class="main-container">
+            <div class="grid">
                 <!-- Main Content Area -->
-                <div class="md:col-span-9 lg:col-span-6">
-                    <div id="mainContent"></div>
-                </div>
-
-                <!-- Right Sidebar (Hidden on Mobile & Tablet) -->
-                <div class="hidden lg:block lg:col-span-3">
-                    <div class="card">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="font-bold text-sm">추천 연결</h3>
-                            <button onclick="refreshSuggestedConnections()" class="text-blue-600 hover:text-blue-800 transition" title="새로고침">
-                                <i class="fas fa-sync-alt text-sm"></i>
-                            </button>
-                        </div>
-                        <div id="suggestedConnections"></div>
-                    </div>
-                </div>
+                <div id="mainContent"></div>
             </div>
         </div>
         
         <!-- Mobile Bottom Navigation -->
-        <nav class="mobile-nav md:hidden">
-            <div class="grid grid-cols-5 h-16">
-                <a href="#" class="mobile-nav-item" data-page="feed">
-                    <i class="fas fa-home text-xl mb-1"></i>
-                    <span class="text-xs">홈</span>
-                </a>
-                <a href="#" class="mobile-nav-item" data-page="nodes">
-                    <i class="fas fa-sitemap text-xl mb-1"></i>
-                    <span class="text-xs">노드</span>
-                </a>
-                <a href="#" class="mobile-nav-item" data-page="family">
-                    <i class="fas fa-users text-xl mb-1"></i>
-                    <span class="text-xs">가족</span>
-                </a>
-                <a href="#" class="mobile-nav-item" data-page="albums">
-                    <i class="fas fa-images text-xl mb-1"></i>
-                    <span class="text-xs">앨범</span>
-                </a>
-                <a href="#" class="mobile-nav-item" data-page="profile">
-                    <i class="fas fa-user text-xl mb-1"></i>
-                    <span class="text-xs">프로필</span>
-                </a>
-            </div>
+        <nav class="mobile-nav">
+            <a href="#" class="mobile-nav-item active" data-page="feed">
+                <i class="fas fa-home"></i>
+                <span>홈</span>
+            </a>
+            <a href="#" class="mobile-nav-item" data-page="nodes">
+                <i class="fas fa-sitemap"></i>
+                <span>노드</span>
+            </a>
+            <a href="#" class="mobile-nav-item" data-page="profile">
+                <i class="fas fa-user"></i>
+                <span>프로필</span>
+            </a>
         </nav>
 
         <script>

@@ -68,6 +68,15 @@ async function loadPage(page) {
   currentPage = page;
   const mainContent = document.getElementById('mainContent');
   
+  // Update navigation active state
+  document.querySelectorAll('.nav-link, .mobile-nav-item').forEach(item => {
+    if (item.dataset.page === page) {
+      item.classList.add('active');
+    } else {
+      item.classList.remove('active');
+    }
+  });
+  
   switch (page) {
     case 'feed':
       await loadFeed();
@@ -75,20 +84,11 @@ async function loadPage(page) {
     case 'nodes':
       await loadNodesPage();
       break;
-    case 'family':
-      await loadKoreanFamilyTree();
-      break;
-    case 'albums':
-      await loadFamilyAlbums();
-      break;
-    case 'timeline':
-      await loadFamilyTimeline();
-      break;
-    case 'invitations':
-      await loadFamilyInvitations();
-      break;
     case 'profile':
       await loadProfile(currentUser.id);
+      break;
+    default:
+      await loadFeed();
       break;
   }
 }
@@ -487,27 +487,100 @@ async function loadProfile(userId) {
         ` : `<p class="text-gray-500">등록된 스킬이 없습니다.</p>`}
       </div>
       
+      <!-- Family Section -->
+      ${isOwnProfile ? `
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-users mr-2"></i>가족
+            </h3>
+            <div class="flex gap-2">
+              <button onclick="loadFamilyAlbums()" class="btn btn-secondary btn-sm">
+                <i class="fas fa-images"></i>
+                <span class="hidden sm:inline ml-1">앨범</span>
+              </button>
+              <button onclick="loadFamilyTimeline()" class="btn btn-secondary btn-sm">
+                <i class="fas fa-calendar-alt"></i>
+                <span class="hidden sm:inline ml-1">타임라인</span>
+              </button>
+              <button onclick="loadKoreanFamilyTree()" class="btn btn-primary btn-sm">
+                <i class="fas fa-project-diagram"></i>
+                <span class="hidden sm:inline ml-1">가족 관계도</span>
+              </button>
+            </div>
+          </div>
+          
+          <div id="compactFamilyNetwork" style="height: 300px; position: relative;">
+            <div class="loading">
+              <div class="loading-spinner"></div>
+              <p style="margin-top: 1rem; color: var(--gray-500);">가족 관계도를 불러오는 중...</p>
+            </div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <div id="familyMemberCount" style="font-size: var(--text-2xl); font-weight: var(--font-bold); color: var(--primary-600);">-</div>
+              <div style="font-size: var(--text-sm); color: var(--gray-600); margin-top: var(--spacing-1);">등록된 가족</div>
+            </div>
+            <div>
+              <div id="verifiedMemberCount" style="font-size: var(--text-2xl); font-weight: var(--font-bold); color: var(--success);">-</div>
+              <div style="font-size: var(--text-sm); color: var(--gray-600); margin-top: var(--spacing-1);">인증 완료</div>
+            </div>
+            <div>
+              <div id="pendingMemberCount" style="font-size: var(--text-2xl); font-weight: var(--font-bold); color: var(--warning);">-</div>
+              <div style="font-size: var(--text-sm); color: var(--gray-600); margin-top: var(--spacing-1);">인증 대기</div>
+            </div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="flex gap-3">
+            <button onclick="showAddMemberModal()" class="btn btn-primary flex-1">
+              <i class="fas fa-plus mr-2"></i>가족 추가
+            </button>
+            <button onclick="viewFullFamilyTree()" class="btn btn-secondary flex-1">
+              <i class="fas fa-sitemap mr-2"></i>전체 보기
+            </button>
+          </div>
+        </div>
+      ` : ''}
+      
       <!-- Posts -->
       ${userPosts.length > 0 ? `
         <div class="card">
-          <h3 class="font-bold text-xl mb-4">
-            <i class="fas fa-rss mr-2"></i>활동
-          </h3>
-          <div class="space-y-4">
-            ${userPosts.map(post => `
-              <div class="border-b pb-4 last:border-b-0">
-                <p class="text-gray-700 mb-2">${post.content.substring(0, 150)}${post.content.length > 150 ? '...' : ''}</p>
-                <p class="text-sm text-gray-500">
-                  <i class="fas fa-thumbs-up mr-1"></i>${post.likes_count}
-                  <i class="fas fa-comment ml-3 mr-1"></i>${post.comments_count}
-                  <span class="ml-3">${formatDate(post.created_at)}</span>
-                </p>
-              </div>
-            `).join('')}
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-rss mr-2"></i>활동
+            </h3>
+          </div>
+          <div class="card-body">
+            <div class="space-y-4">
+              ${userPosts.map(post => `
+                <div style="border-bottom: 1px solid var(--gray-200); padding-bottom: 1rem;">
+                  <p style="color: var(--gray-700); margin-bottom: 0.5rem;">${post.content.substring(0, 150)}${post.content.length > 150 ? '...' : ''}</p>
+                  <p style="font-size: var(--text-sm); color: var(--gray-500);">
+                    <i class="fas fa-thumbs-up mr-1"></i>${post.likes_count}
+                    <i class="fas fa-comment ml-3 mr-1"></i>${post.comments_count}
+                    <span class="ml-3">${formatDate(post.created_at)}</span>
+                  </p>
+                </div>
+              `).join('')}
+            </div>
           </div>
         </div>
       ` : ''}
     `;
+    
+    // Load family network if on own profile
+    if (isOwnProfile) {
+      setTimeout(() => {
+        if (typeof loadCompactFamilyNetwork === 'function') {
+          loadCompactFamilyNetwork();
+        }
+      }, 500);
+    }
   } catch (error) {
     console.error('Error loading profile:', error);
     mainContent.innerHTML = '<div class="card"><p>프로필을 불러오는데 실패했습니다.</p></div>';
