@@ -2488,6 +2488,10 @@ app.get('/', (c) => {
                         <i class="fas fa-user"></i>
                         <span>프로필</span>
                     </a>
+                    <a href="#" class="nav-link" data-page="settings">
+                        <i class="fas fa-cog"></i>
+                        <span>설정</span>
+                    </a>
                 </nav>
                 
                 <!-- Right Side Actions -->
@@ -2608,6 +2612,10 @@ app.get('/', (c) => {
             <a href="#" class="mobile-nav-item" data-page="profile">
                 <i class="fas fa-user"></i>
                 <span>프로필</span>
+            </a>
+            <a href="#" class="mobile-nav-item" data-page="settings">
+                <i class="fas fa-cog"></i>
+                <span>설정</span>
             </a>
         </nav>
 

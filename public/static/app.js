@@ -354,6 +354,9 @@ async function loadPage(page) {
     case 'profile':
       await loadProfile(currentUser.id);
       break;
+    case 'settings':
+      await loadSettingsPage();
+      break;
     default:
       await loadFeed();
       break;
@@ -1558,5 +1561,426 @@ function viewFullFamilyTree() {
   loadPage('family');
   // Scroll to top
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ==================== Settings Page ====================
+
+// Load settings page
+async function loadSettingsPage() {
+  const mainContent = document.getElementById('mainContent');
+  const rightSidebar = document.getElementById('rightSidebar');
+  
+  // Clear right sidebar
+  if (rightSidebar) {
+    rightSidebar.innerHTML = '';
+  }
+  
+  // Get session info from localStorage
+  const loginTime = localStorage.getItem('loginTime') || new Date().toISOString();
+  const loginHistory = JSON.parse(localStorage.getItem('loginHistory') || '[]');
+  const sessionId = localStorage.getItem('sessionId') || 'session-' + Date.now();
+  
+  mainContent.innerHTML = `
+    <div class="card">
+      <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 2px solid var(--gray-200);">
+        <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--primary-500); display: flex; align-items: center; justify-content: center;">
+          <i class="fas fa-cog" style="font-size: 1.5rem; color: white;"></i>
+        </div>
+        <div>
+          <h1 style="font-size: var(--text-2xl); font-weight: var(--font-bold); margin-bottom: 0.25rem;">설정</h1>
+          <p style="font-size: var(--text-sm); color: var(--gray-600);">계정 및 앱 설정을 관리하세요</p>
+        </div>
+      </div>
+      
+      <!-- Settings Sections -->
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        
+        <!-- Login Status Section -->
+        <div class="card" style="background: var(--gray-50); border: 1px solid var(--gray-200);">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+            <i class="fas fa-user-check" style="font-size: 1.25rem; color: var(--success);"></i>
+            <h2 style="font-size: var(--text-xl); font-weight: var(--font-bold);">로그인 상황</h2>
+          </div>
+          
+          <!-- Current Session -->
+          <div style="background: white; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <h3 style="font-weight: 600; color: var(--gray-800);">현재 세션</h3>
+              <span class="badge badge-success">활성</span>
+            </div>
+            <div style="display: grid; gap: 0.5rem; font-size: var(--text-sm);">
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--gray-600);">사용자:</span>
+                <span style="font-weight: 600;">${currentUser.full_name}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--gray-600);">이메일:</span>
+                <span style="font-weight: 600;">${currentUser.email || 'test@example.com'}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--gray-600);">세션 ID:</span>
+                <span style="font-family: monospace; font-size: var(--text-xs); color: var(--gray-500);">${sessionId.substring(0, 20)}...</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--gray-600);">로그인 시간:</span>
+                <span style="font-weight: 600;">${formatDateTime(loginTime)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--gray-600);">활동 시간:</span>
+                <span style="font-weight: 600;">${calculateActiveTime(loginTime)}</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Login History -->
+          <div style="background: white; padding: 1rem; border-radius: 0.5rem;">
+            <h3 style="font-weight: 600; color: var(--gray-800); margin-bottom: 0.75rem;">최근 로그인 기록</h3>
+            ${renderLoginHistory(loginHistory)}
+          </div>
+          
+          <!-- Actions -->
+          <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+            <button onclick="refreshSession()" class="btn btn-secondary btn-sm">
+              <i class="fas fa-sync-alt" style="margin-right: 0.5rem;"></i>세션 새로고침
+            </button>
+            <button onclick="clearLoginHistory()" class="btn btn-ghost btn-sm">
+              <i class="fas fa-trash" style="margin-right: 0.5rem;"></i>기록 삭제
+            </button>
+          </div>
+        </div>
+        
+        <!-- Account Settings Section -->
+        <div class="card" style="background: var(--gray-50); border: 1px solid var(--gray-200);">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+            <i class="fas fa-user-cog" style="font-size: 1.25rem; color: var(--primary-600);"></i>
+            <h2 style="font-size: var(--text-xl); font-weight: var(--font-bold);">계정 설정</h2>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <button onclick="window.location.href='/profile/edit'" class="setting-item">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <i class="fas fa-edit" style="color: var(--gray-600);"></i>
+                <div style="flex: 1;">
+                  <div style="font-weight: 600;">프로필 편집</div>
+                  <div style="font-size: var(--text-sm); color: var(--gray-600);">이름, 사진, 소개 등을 수정</div>
+                </div>
+                <i class="fas fa-chevron-right" style="color: var(--gray-400);"></i>
+              </div>
+            </button>
+            
+            <button onclick="showChangePassword()" class="setting-item">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <i class="fas fa-key" style="color: var(--gray-600);"></i>
+                <div style="flex: 1;">
+                  <div style="font-weight: 600;">비밀번호 변경</div>
+                  <div style="font-size: var(--text-sm); color: var(--gray-600);">보안을 위해 정기적으로 변경하세요</div>
+                </div>
+                <i class="fas fa-chevron-right" style="color: var(--gray-400);"></i>
+              </div>
+            </button>
+            
+            <button onclick="showDeleteAccount()" class="setting-item">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <i class="fas fa-user-times" style="color: var(--error);"></i>
+                <div style="flex: 1;">
+                  <div style="font-weight: 600; color: var(--error);">계정 삭제</div>
+                  <div style="font-size: var(--text-sm); color: var(--gray-600);">계정을 영구적으로 삭제</div>
+                </div>
+                <i class="fas fa-chevron-right" style="color: var(--gray-400);"></i>
+              </div>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Privacy Settings Section -->
+        <div class="card" style="background: var(--gray-50); border: 1px solid var(--gray-200);">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+            <i class="fas fa-shield-alt" style="font-size: 1.25rem; color: var(--success);"></i>
+            <h2 style="font-size: var(--text-xl); font-weight: var(--font-bold);">프라이버시</h2>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div class="setting-item">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                  <i class="fas fa-eye" style="color: var(--gray-600);"></i>
+                  <div>
+                    <div style="font-weight: 600;">프로필 공개</div>
+                    <div style="font-size: var(--text-sm); color: var(--gray-600);">다른 사용자에게 프로필 표시</div>
+                  </div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="profileVisibility" checked onchange="toggleSetting('profileVisibility', this.checked)">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+            
+            <div class="setting-item">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                  <i class="fas fa-search" style="color: var(--gray-600);"></i>
+                  <div>
+                    <div style="font-weight: 600;">검색 허용</div>
+                    <div style="font-size: var(--text-sm); color: var(--gray-600);">검색 결과에 표시</div>
+                  </div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="searchable" checked onchange="toggleSetting('searchable', this.checked)">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Notification Settings Section -->
+        <div class="card" style="background: var(--gray-50); border: 1px solid var(--gray-200);">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+            <i class="fas fa-bell" style="font-size: 1.25rem; color: var(--warning);"></i>
+            <h2 style="font-size: var(--text-xl); font-weight: var(--font-bold);">알림 설정</h2>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div class="setting-item">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                  <i class="fas fa-desktop" style="color: var(--gray-600);"></i>
+                  <div>
+                    <div style="font-weight: 600;">푸시 알림</div>
+                    <div style="font-size: var(--text-sm); color: var(--gray-600);">브라우저 알림 받기</div>
+                  </div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="pushNotifications" checked onchange="toggleSetting('pushNotifications', this.checked)">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+            
+            <div class="setting-item">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                  <i class="fas fa-envelope" style="color: var(--gray-600);"></i>
+                  <div>
+                    <div style="font-weight: 600;">이메일 알림</div>
+                    <div style="font-size: var(--text-sm); color: var(--gray-600);">중요 알림을 이메일로 받기</div>
+                  </div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="emailNotifications" onchange="toggleSetting('emailNotifications', this.checked)">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- App Settings Section -->
+        <div class="card" style="background: var(--gray-50); border: 1px solid var(--gray-200);">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+            <i class="fas fa-sliders-h" style="font-size: 1.25rem; color: var(--info);"></i>
+            <h2 style="font-size: var(--text-xl); font-weight: var(--font-bold);">앱 설정</h2>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <button onclick="clearCache()" class="setting-item">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <i class="fas fa-broom" style="color: var(--gray-600);"></i>
+                <div style="flex: 1;">
+                  <div style="font-weight: 600;">캐시 삭제</div>
+                  <div style="font-size: var(--text-sm); color: var(--gray-600);">저장된 데이터 정리</div>
+                </div>
+                <i class="fas fa-chevron-right" style="color: var(--gray-400);"></i>
+              </div>
+            </button>
+            
+            <button onclick="showAbout()" class="setting-item">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <i class="fas fa-info-circle" style="color: var(--gray-600);"></i>
+                <div style="flex: 1;">
+                  <div style="font-weight: 600;">앱 정보</div>
+                  <div style="font-size: var(--text-sm); color: var(--gray-600);">버전 1.0.0</div>
+                </div>
+                <i class="fas fa-chevron-right" style="color: var(--gray-400);"></i>
+              </div>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Logout Button -->
+        <div class="card" style="background: var(--error-light); border: 2px solid var(--error);">
+          <button onclick="logout()" style="width: 100%; padding: 1rem; background: var(--error); color: white; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.75rem; transition: all 0.15s;"
+                  onmouseover="this.style.background='#dc2626'"
+                  onmouseout="this.style.background='var(--error)'">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>로그아웃</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Load saved settings
+  loadSettings();
+}
+
+// Format date time
+function formatDateTime(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = now - date;
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  
+  if (hours === 0 && minutes === 0) {
+    return '방금 전';
+  } else if (hours === 0) {
+    return `${minutes}분 전`;
+  } else if (hours < 24) {
+    return `${hours}시간 ${minutes}분 전`;
+  } else {
+    return date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+  }
+}
+
+// Calculate active time
+function calculateActiveTime(loginTime) {
+  const start = new Date(loginTime);
+  const now = new Date();
+  const diff = now - start;
+  
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  
+  if (hours === 0) {
+    return `${minutes}분`;
+  } else {
+    return `${hours}시간 ${minutes}분`;
+  }
+}
+
+// Render login history
+function renderLoginHistory(history) {
+  if (!history || history.length === 0) {
+    return `
+      <div style="text-align: center; padding: 1rem; color: var(--gray-500);">
+        <i class="fas fa-history" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
+        <p style="font-size: var(--text-sm);">로그인 기록이 없습니다</p>
+      </div>
+    `;
+  }
+  
+  return `
+    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+      ${history.slice(0, 5).map((record, index) => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: var(--gray-50); border-radius: 0.25rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <i class="fas fa-clock" style="color: var(--gray-400); font-size: var(--text-sm);"></i>
+            <div>
+              <div style="font-size: var(--text-sm); font-weight: 600;">${formatDateTime(record.time)}</div>
+              <div style="font-size: var(--text-xs); color: var(--gray-500);">${record.device || 'Unknown Device'}</div>
+            </div>
+          </div>
+          ${index === 0 ? '<span class="badge badge-success" style="font-size: var(--text-xs);">현재</span>' : ''}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// Refresh session
+function refreshSession() {
+  const newSessionId = 'session-' + Date.now();
+  localStorage.setItem('sessionId', newSessionId);
+  localStorage.setItem('loginTime', new Date().toISOString());
+  
+  // Add to login history
+  const history = JSON.parse(localStorage.getItem('loginHistory') || '[]');
+  history.unshift({
+    time: new Date().toISOString(),
+    device: navigator.userAgent.substring(0, 50)
+  });
+  localStorage.setItem('loginHistory', JSON.stringify(history.slice(0, 10)));
+  
+  alert('세션이 새로고침되었습니다!');
+  loadSettingsPage();
+}
+
+// Clear login history
+function clearLoginHistory() {
+  if (confirm('로그인 기록을 모두 삭제하시겠습니까?')) {
+    localStorage.removeItem('loginHistory');
+    alert('로그인 기록이 삭제되었습니다.');
+    loadSettingsPage();
+  }
+}
+
+// Load settings from localStorage
+function loadSettings() {
+  const settings = {
+    profileVisibility: localStorage.getItem('profileVisibility') !== 'false',
+    searchable: localStorage.getItem('searchable') !== 'false',
+    pushNotifications: localStorage.getItem('pushNotifications') !== 'false',
+    emailNotifications: localStorage.getItem('emailNotifications') === 'true'
+  };
+  
+  Object.keys(settings).forEach(key => {
+    const element = document.getElementById(key);
+    if (element) {
+      element.checked = settings[key];
+    }
+  });
+}
+
+// Toggle setting
+function toggleSetting(setting, value) {
+  localStorage.setItem(setting, value);
+  console.log(`Setting ${setting} changed to ${value}`);
+  
+  if (setting === 'pushNotifications' && value) {
+    requestNotificationPermission();
+  }
+}
+
+// Show change password modal
+function showChangePassword() {
+  alert('비밀번호 변경 기능은 준비 중입니다.');
+}
+
+// Show delete account modal
+function showDeleteAccount() {
+  if (confirm('정말로 계정을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
+    alert('계정 삭제 기능은 준비 중입니다.');
+  }
+}
+
+// Clear cache
+function clearCache() {
+  if (confirm('캐시를 삭제하시겠습니까?\n\n일부 설정이 초기화될 수 있습니다.')) {
+    // Clear specific cache items
+    const keysToKeep = ['user', 'theme', 'loginTime', 'sessionId'];
+    Object.keys(localStorage).forEach(key => {
+      if (!keysToKeep.includes(key)) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    alert('캐시가 삭제되었습니다.');
+  }
+}
+
+// Show about modal
+function showAbout() {
+  alert(`CHON Village v1.0.0\n\n프로페셔널 네트워킹 플랫폼\n\n© 2026 CHON Village. All rights reserved.`);
+}
+
+// Logout
+function logout() {
+  if (confirm('로그아웃하시겠습니까?')) {
+    localStorage.removeItem('user');
+    localStorage.removeItem('sessionId');
+    window.location.href = '/login';
+  }
 }
 
