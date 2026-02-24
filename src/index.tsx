@@ -1596,186 +1596,328 @@ app.get('/login', (c) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>로그인 - CHON-Network</title>
+        <title>로그인 - CHON Village</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <link href="/static/style.css" rel="stylesheet">
         <style>
           body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-          }
-          .login-container {
-            backdrop-filter: blur(10px);
-            background: rgba(255, 255, 255, 0.95);
-          }
-          .input-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
             position: relative;
+            overflow: hidden;
           }
-          .input-group input {
-            padding-left: 45px;
-          }
-          .input-group i {
+          
+          /* Animated background */
+          body::before {
+            content: '';
             position: absolute;
-            left: 15px;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: moveBackground 20s linear infinite;
+          }
+          
+          @keyframes moveBackground {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+          }
+          
+          .login-container {
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            z-index: 1;
+          }
+          
+          .logo-ring {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-700));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+            animation: pulse 2s ease-in-out infinite;
+          }
+          
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+          }
+          
+          .input-wrapper {
+            position: relative;
+            margin-bottom: 1.5rem;
+          }
+          
+          .input-icon {
+            position: absolute;
+            left: 1rem;
             top: 50%;
             transform: translateY(-50%);
-            color: #9ca3af;
+            color: var(--gray-400);
+            transition: color 0.2s;
           }
-          .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            transition: all 0.3s ease;
+          
+          .form-input:focus + .input-icon {
+            color: var(--primary-600);
           }
-          .btn-primary:hover {
+          
+          .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem 0.875rem 3rem;
+            border: 2px solid var(--gray-300);
+            border-radius: var(--radius-lg);
+            font-size: var(--text-base);
+            transition: all 0.2s;
+            background: white;
+          }
+          
+          .form-input:focus {
+            outline: none;
+            border-color: var(--primary-500);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+          }
+          
+          .btn-login {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            border: none;
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+          }
+          
+          .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
           }
+          
+          .btn-login:active {
+            transform: translateY(0);
+          }
+          
+          .btn-social {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--gray-300);
+            border-radius: var(--radius-lg);
+            background: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+          }
+          
+          .btn-social:hover {
+            border-color: var(--gray-400);
+            background: var(--gray-50);
+            transform: translateY(-1px);
+          }
+          
           .divider {
             display: flex;
             align-items: center;
-            text-align: center;
-            margin: 20px 0;
+            margin: 1.5rem 0;
           }
+          
           .divider::before,
           .divider::after {
             content: '';
             flex: 1;
-            border-bottom: 1px solid #e5e7eb;
+            height: 1px;
+            background: var(--gray-300);
           }
+          
           .divider span {
-            padding: 0 10px;
-            color: #6b7280;
-            font-size: 14px;
+            padding: 0 1rem;
+            color: var(--gray-500);
+            font-size: 0.875rem;
+            font-weight: 500;
           }
+          
+          .error-box {
+            padding: 0.875rem;
+            background: var(--error-light);
+            border: 1px solid var(--error);
+            border-radius: var(--radius-md);
+            color: var(--error);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            display: none;
+            animation: slideDown 0.3s ease;
+          }
+          
+          .error-box.show {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          }
+          
+          @keyframes slideDown {
+            from {
+              opacity: 0;
+              transform: translateY(-10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          
+          .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          }
+          
           .checkbox-custom {
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #d1d5db;
-            border-radius: 4px;
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid var(--gray-400);
+            border-radius: 0.25rem;
             cursor: pointer;
+            transition: all 0.2s;
             position: relative;
           }
+          
           .checkbox-custom:checked {
-            background: #667eea;
-            border-color: #667eea;
+            background: var(--primary-600);
+            border-color: var(--primary-600);
           }
+          
           .checkbox-custom:checked::after {
             content: '✓';
             position: absolute;
             color: white;
-            font-size: 14px;
+            font-size: 0.875rem;
+            font-weight: bold;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
           }
         </style>
     </head>
-    <body class="flex items-center justify-center p-4">
-        <div class="login-container w-full max-w-md rounded-2xl shadow-2xl p-8">
+    <body>
+        <div class="login-container card w-full max-w-md" style="padding: 2.5rem;">
             <!-- Logo -->
-            <div class="text-center mb-8">
-                <div class="inline-block">
-                    <i class="fas fa-network-wired text-5xl text-purple-600 mb-3"></i>
+            <div class="text-center" style="margin-bottom: 2rem;">
+                <div class="logo-ring">
+                    <i class="fas fa-network-wired" style="font-size: 2rem; color: white;"></i>
                 </div>
-                <h1 class="text-3xl font-bold text-gray-800 mb-2">CHON-Network</h1>
-                <p class="text-gray-600">전문가 네트워킹 플랫폼</p>
+                <h1 style="font-size: 2rem; font-weight: 700; color: var(--gray-900); margin-bottom: 0.5rem;">
+                    CHON Village
+                </h1>
+                <p style="color: var(--gray-600); font-size: 0.9375rem;">
+                    프로페셔널 네트워킹 플랫폼에 오신 것을 환영합니다
+                </p>
+            </div>
+            
+            <!-- Error Message -->
+            <div id="errorMessage" class="error-box">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="errorText">이메일 또는 비밀번호가 올바르지 않습니다.</span>
             </div>
             
             <!-- Login Form -->
-            <form id="loginForm" class="space-y-4">
+            <form id="loginForm">
                 <!-- Email Input -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        이메일
-                    </label>
-                    <div class="input-group">
-                        <i class="fas fa-envelope"></i>
-                        <input 
-                            type="email" 
-                            id="email" 
-                            required
-                            placeholder="이메일을 입력하세요"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        >
-                    </div>
+                <div class="input-wrapper">
+                    <input 
+                        type="email" 
+                        id="email" 
+                        class="form-input"
+                        placeholder="이메일 주소"
+                        required
+                        autocomplete="email"
+                    >
+                    <i class="fas fa-envelope input-icon"></i>
                 </div>
                 
                 <!-- Password Input -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        비밀번호
-                    </label>
-                    <div class="input-group">
-                        <i class="fas fa-lock"></i>
-                        <input 
-                            type="password" 
-                            id="password" 
-                            required
-                            placeholder="비밀번호를 입력하세요"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        >
-                    </div>
+                <div class="input-wrapper">
+                    <input 
+                        type="password" 
+                        id="password" 
+                        class="form-input"
+                        placeholder="비밀번호"
+                        required
+                        autocomplete="current-password"
+                    >
+                    <i class="fas fa-lock input-icon"></i>
                 </div>
                 
-                <!-- Remember & Find -->
-                <div class="flex items-center justify-between text-sm">
-                    <label class="flex items-center cursor-pointer">
-                        <input type="checkbox" class="checkbox-custom mr-2">
-                        <span class="text-gray-700">로그인 상태 유지</span>
+                <!-- Remember & Forgot -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <label class="checkbox-wrapper" style="cursor: pointer;">
+                        <input type="checkbox" id="rememberMe" class="checkbox-custom">
+                        <span style="font-size: 0.875rem; color: var(--gray-700);">로그인 상태 유지</span>
                     </label>
-                    <a href="#" class="text-purple-600 hover:text-purple-700 font-medium">
+                    <a href="/forgot-password" style="font-size: 0.875rem; color: var(--primary-600); font-weight: 500; text-decoration: none;">
                         비밀번호 찾기
                     </a>
                 </div>
                 
-                <!-- Error Message -->
-                <div id="errorMessage" class="hidden bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-                    <i class="fas fa-exclamation-circle mr-2"></i>
-                    <span id="errorText"></span>
-                </div>
-                
                 <!-- Login Button -->
-                <button 
-                    type="submit" 
-                    class="btn-primary w-full text-white font-semibold py-3 rounded-lg"
-                >
+                <button type="submit" class="btn-login">
+                    <i class="fas fa-sign-in-alt" style="margin-right: 0.5rem;"></i>
                     로그인
                 </button>
             </form>
             
             <!-- Divider -->
             <div class="divider">
-                <span>또는</span>
+                <span>또는 소셜 계정으로 계속하기</span>
             </div>
             
             <!-- Social Login -->
-            <div class="space-y-3">
-                <button class="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                    <i class="fab fa-google text-red-500 text-xl mr-3"></i>
-                    <span class="font-medium text-gray-700">Google로 계속하기</span>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <button type="button" class="btn-social" onclick="loginWithGoogle()">
+                    <i class="fab fa-google" style="font-size: 1.25rem; color: #DB4437;"></i>
+                    <span>Google로 계속하기</span>
                 </button>
-                <button class="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                    <i class="fab fa-facebook text-blue-600 text-xl mr-3"></i>
-                    <span class="font-medium text-gray-700">Facebook으로 계속하기</span>
+                <button type="button" class="btn-social" onclick="loginWithGithub()">
+                    <i class="fab fa-github" style="font-size: 1.25rem; color: #333;"></i>
+                    <span>GitHub로 계속하기</span>
                 </button>
             </div>
             
             <!-- Register Link -->
-            <div class="text-center mt-6 pt-6 border-t border-gray-200">
-                <p class="text-gray-600">
-                    아직 회원이 아니신가요?
-                    <a href="/register" class="text-purple-600 hover:text-purple-700 font-semibold ml-1">
-                        회원가입
+            <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--gray-200);">
+                <p style="color: var(--gray-600); font-size: 0.9375rem;">
+                    아직 계정이 없으신가요?
+                    <a href="/register" style="color: var(--primary-600); font-weight: 600; text-decoration: none; margin-left: 0.25rem;">
+                        회원가입하기
                     </a>
                 </p>
             </div>
             
             <!-- Footer -->
-            <div class="text-center mt-6 text-xs text-gray-500">
-                <p>로그인하시면 CHON-Network의 
-                    <a href="#" class="text-purple-600 hover:underline">이용약관</a> 및 
-                    <a href="#" class="text-purple-600 hover:underline">개인정보 처리방침</a>에 
-                    동의하는 것으로 간주합니다.
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <p style="font-size: 0.75rem; color: var(--gray-500); line-height: 1.5;">
+                    로그인하시면 CHON Village의 
+                    <a href="/terms" style="color: var(--primary-600); text-decoration: none;">이용약관</a> 및 
+                    <a href="/privacy" style="color: var(--primary-600); text-decoration: none;">개인정보 처리방침</a>에 
+                    동의하는 것으로 간주됩니다.
                 </p>
             </div>
         </div>
@@ -1795,9 +1937,10 @@ app.get('/register', (c) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>회원가입 - CHON-Network</title>
+        <title>회원가입 - CHON Village</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <link href="/static/style.css" rel="stylesheet">
         <style>
           body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
