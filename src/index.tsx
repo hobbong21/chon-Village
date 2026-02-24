@@ -1455,6 +1455,158 @@ app.get('/api/my-level', async (c) => {
 })
 
 // ============================================
+// Network Structure Types APIs
+// ============================================
+
+// Get all network structure types
+app.get('/api/network-structures', async (c) => {
+  const { DB } = c.env
+  
+  const { results } = await DB.prepare(`
+    SELECT * FROM network_structure_types ORDER BY id
+  `).all()
+  
+  return c.json({ structures: results })
+})
+
+// Get network structure by ID
+app.get('/api/network-structures/:id', async (c) => {
+  const { DB } = c.env
+  const structureId = c.req.param('id')
+  
+  const structure = await DB.prepare(`
+    SELECT * FROM network_structure_types WHERE id = ?
+  `).bind(structureId).first()
+  
+  if (!structure) {
+    return c.json({ error: 'Network structure not found' }, 404)
+  }
+  
+  return c.json({ structure })
+})
+
+// Get node hierarchy for a specific node
+app.get('/api/nodes/:id/hierarchy', async (c) => {
+  const { DB } = c.env
+  const nodeId = c.req.param('id')
+  
+  // Get node with structure type
+  const node = await DB.prepare(`
+    SELECT n.*, nst.name as structure_name, nst.name_ko as structure_name_ko,
+           nst.graph_type, nst.is_directed, nst.allows_cycles, nst.visualization_type
+    FROM nodes n
+    LEFT JOIN network_structure_types nst ON n.network_structure_type_id = nst.id
+    WHERE n.id = ?
+  `).bind(nodeId).first()
+  
+  if (!node) {
+    return c.json({ error: 'Node not found' }, 404)
+  }
+  
+  // Get hierarchy levels
+  const { results: levels } = await DB.prepare(`
+    SELECT 
+      nhl.*,
+      u.full_name,
+      u.profile_image,
+      nm.status,
+      nr.role_name_ko
+    FROM node_hierarchy_levels nhl
+    LEFT JOIN node_memberships nm ON nhl.membership_id = nm.id
+    LEFT JOIN users u ON nm.user_id = u.id
+    LEFT JOIN node_roles nr ON nm.role_id = nr.id
+    WHERE nhl.node_id = ?
+    ORDER BY nhl.level, nhl.created_at
+  `).bind(nodeId).all()
+  
+  // Get connections
+  const { results: connections } = await DB.prepare(`
+    SELECT 
+      nc.*,
+      n1.name as from_node_name,
+      n2.name as to_node_name
+    FROM node_connections nc
+    LEFT JOIN nodes n1 ON nc.from_node_id = n1.id
+    LEFT JOIN nodes n2 ON nc.to_node_id = n2.id
+    WHERE nc.from_node_id = ? OR nc.to_node_id = ?
+  `).bind(nodeId, nodeId).all()
+  
+  return c.json({ node, levels, connections })
+})
+
+// Validate connection between two users in a node
+app.post('/api/nodes/:id/validate-connection', async (c) => {
+  const { DB } = c.env
+  const nodeId = c.req.param('id')
+  const { from_user_id, to_user_id, connection_type } = await c.req.json()
+  
+  // Get node structure type
+  const node = await DB.prepare(`
+    SELECT n.*, nst.*
+    FROM nodes n
+    LEFT JOIN network_structure_types nst ON n.network_structure_type_id = nst.id
+    WHERE n.id = ?
+  `).bind(nodeId).first()
+  
+  if (!node) {
+    return c.json({ error: 'Node not found' }, 404)
+  }
+  
+  // Validation logic based on structure type
+  let isValid = true
+  const errors = []
+  
+  // Check if connection already exists
+  const existing = await DB.prepare(`
+    SELECT id FROM node_connections
+    WHERE (from_node_id = ? AND to_node_id = ?)
+       OR (to_node_id = ? AND from_node_id = ?)
+  `).bind(nodeId, nodeId, nodeId, nodeId).first()
+  
+  if (existing) {
+    isValid = false
+    errors.push('Connection already exists')
+  }
+  
+  // Structure-specific validation
+  if (node.graph_type === 'tree' && node.allows_cycles === 0) {
+    // Check for cycles (simplified - would need graph traversal for full check)
+    const wouldCreateCycle = false  // TODO: Implement cycle detection
+    if (wouldCreateCycle) {
+      isValid = false
+      errors.push('Would create a cycle')
+    }
+  }
+  
+  if (node.max_parents > 0 && node.max_parents !== -1) {
+    // Check parent count
+    const { count } = await DB.prepare(`
+      SELECT COUNT(*) as count FROM node_connections
+      WHERE to_node_id = ? AND from_node_id = ?
+    `).bind(nodeId, nodeId).first() as any
+    
+    if (count >= node.max_parents) {
+      isValid = false
+      errors.push(`Maximum parents (${node.max_parents}) exceeded`)
+    }
+  }
+  
+  // Log validation
+  await DB.prepare(`
+    INSERT INTO network_connection_logs 
+      (node_id, structure_type_id, action, from_user_id, to_user_id, is_valid, error_message)
+    VALUES (?, ?, 'validate', ?, ?, ?, ?)
+  `).bind(nodeId, node.network_structure_type_id, from_user_id, to_user_id, isValid ? 1 : 0, JSON.stringify(errors)).run()
+  
+  return c.json({ 
+    isValid, 
+    errors, 
+    structureType: node.structure_name,
+    rules: JSON.parse(node.connection_rule || '{}')
+  })
+})
+
+// ============================================
 // END OF NODE EXPANSION SYSTEM APIs
 // ============================================
 
@@ -2559,6 +2711,7 @@ app.get('/', (c) => {
         <script src="/static/family-advanced.js" defer></script>
         <script src="/static/notifications.js" defer></script>
         <script src="/static/posts.js" defer></script>
+        <script src="/static/network-structures.js" defer></script>
         <script src="/static/app.js" defer></script>
         
         <!-- PWA Service Worker Registration -->
