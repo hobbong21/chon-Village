@@ -618,9 +618,14 @@ async function loadProfile(userId) {
                 ` : ''}
               </div>
               ${isOwnProfile ? `
-                <a href="/profile/edit" class="btn btn-primary">
-                  <i class="fas fa-edit mr-1"></i>프로필 편집
-                </a>
+                <div class="flex gap-2">
+                  <button onclick="showProfileQRCode()" class="btn btn-secondary">
+                    <i class="fas fa-qrcode mr-1"></i>QR 코드
+                  </button>
+                  <a href="/profile/edit" class="btn btn-primary">
+                    <i class="fas fa-edit mr-1"></i>프로필 편집
+                  </a>
+                </div>
               ` : ''}
             </div>
             ${!isOwnProfile ? `
@@ -2013,5 +2018,197 @@ function logout() {
     localStorage.removeItem('sessionId');
     window.location.href = '/login';
   }
+}
+
+// ========================================
+// QR Code Functions
+// ========================================
+
+// Show profile QR code modal
+function showProfileQRCode() {
+  const profileUrl = `${window.location.origin}/profile/${currentUser.id}`;
+  
+  // Create modal
+  const modal = document.createElement('div');
+  modal.id = 'qrCodeModal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 1rem;
+  `;
+  
+  modal.innerHTML = `
+    <div style="
+      background: white;
+      border-radius: 1rem;
+      padding: 2rem;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    ">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h3 style="font-size: 1.5rem; font-weight: bold; color: var(--gray-900);">
+          <i class="fas fa-qrcode" style="color: var(--primary-600); margin-right: 0.5rem;"></i>
+          내 프로필 QR 코드
+        </h3>
+        <button onclick="closeQRCodeModal()" style="
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          border: none;
+          background: var(--gray-100);
+          color: var(--gray-600);
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s;
+        " onmouseover="this.style.background='var(--gray-200)'" onmouseout="this.style.background='var(--gray-100)'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div style="text-align: center;">
+        <div id="qrCodeContainer" style="
+          display: inline-block;
+          padding: 1rem;
+          background: white;
+          border-radius: 0.5rem;
+          border: 2px solid var(--gray-200);
+          margin-bottom: 1rem;
+        "></div>
+        
+        <div style="background: var(--gray-50); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+          <p style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.5rem;">프로필 URL</p>
+          <div style="
+            background: white;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            border: 1px solid var(--gray-300);
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: var(--gray-800);
+            word-break: break-all;
+          ">${profileUrl}</div>
+        </div>
+        
+        <div style="display: flex; gap: 0.5rem;">
+          <button onclick="copyProfileURL('${profileUrl}')" class="btn btn-secondary" style="flex: 1;">
+            <i class="fas fa-copy"></i> URL 복사
+          </button>
+          <button onclick="downloadQRCode()" class="btn btn-primary" style="flex: 1;">
+            <i class="fas fa-download"></i> 다운로드
+          </button>
+        </div>
+        
+        <p style="font-size: 0.75rem; color: var(--gray-500); margin-top: 1rem;">
+          <i class="fas fa-info-circle"></i> QR 코드를 스캔하면 내 프로필로 바로 연결됩니다
+        </p>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Generate QR code
+  QRCode.toCanvas(document.getElementById('qrCodeContainer'), profileUrl, {
+    width: 256,
+    margin: 2,
+    color: {
+      dark: '#1f2937',
+      light: '#ffffff'
+    }
+  }, function (error) {
+    if (error) {
+      console.error('QR Code generation error:', error);
+      document.getElementById('qrCodeContainer').innerHTML = `
+        <p style="color: var(--error); padding: 2rem;">QR 코드 생성에 실패했습니다.</p>
+      `;
+    }
+  });
+  
+  // Close on background click
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      closeQRCodeModal();
+    }
+  });
+}
+
+// Close QR code modal
+function closeQRCodeModal() {
+  const modal = document.getElementById('qrCodeModal');
+  if (modal) {
+    modal.remove();
+  }
+}
+
+// Copy profile URL to clipboard
+function copyProfileURL(url) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => {
+      // Show success message
+      const btn = event.target.closest('button');
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check"></i> 복사됨!';
+      btn.style.background = 'var(--success)';
+      btn.style.color = 'white';
+      
+      setTimeout(() => {
+        btn.innerHTML = originalHTML;
+        btn.style.background = '';
+        btn.style.color = '';
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy:', err);
+      alert('URL 복사에 실패했습니다.');
+    });
+  } else {
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = url;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+      document.execCommand('copy');
+      alert('URL이 클립보드에 복사되었습니다!');
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      alert('URL 복사에 실패했습니다.');
+    }
+    
+    document.body.removeChild(textArea);
+  }
+}
+
+// Download QR code as image
+function downloadQRCode() {
+  const canvas = document.querySelector('#qrCodeContainer canvas');
+  if (!canvas) {
+    alert('QR 코드를 찾을 수 없습니다.');
+    return;
+  }
+  
+  // Convert canvas to blob and download
+  canvas.toBlob(function(blob) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `chon-village-profile-qr-${currentUser.id}.png`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  });
 }
 

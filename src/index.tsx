@@ -2320,6 +2320,7 @@ app.get('/', (c) => {
         
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
         <link href="/static/style.css" rel="stylesheet">
         <style>
           /* Base styles */
