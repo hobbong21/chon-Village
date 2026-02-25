@@ -699,4 +699,7 @@
     ErrorCorrectLevel: QRErrorCorrectLevel
   };
 
+  // Export to global scope
+  global.QRCodeGenerator = QRCodeGenerator;
+
 })(typeof window !== 'undefined' ? window : this);
