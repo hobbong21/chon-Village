@@ -2133,21 +2133,22 @@ function showProfileQRCode() {
   document.body.appendChild(modal);
   
   // Generate QR code
-  QRCode.toCanvas(document.getElementById('qrCodeContainer'), profileUrl, {
-    width: 256,
-    margin: 2,
-    color: {
-      dark: '#1f2937',
-      light: '#ffffff'
-    }
-  }, function (error) {
-    if (error) {
-      console.error('QR Code generation error:', error);
-      document.getElementById('qrCodeContainer').innerHTML = `
-        <p style="color: var(--error); padding: 2rem;">QR 코드 생성에 실패했습니다.</p>
-      `;
-    }
-  });
+  try {
+    const container = document.getElementById('qrCodeContainer');
+    const canvas = document.createElement('canvas');
+    QRCodeGenerator.toCanvas(canvas, profileUrl, {
+      width: 256,
+      margin: 2,
+      foregroundColor: '#1f2937',
+      backgroundColor: '#ffffff'
+    });
+    container.appendChild(canvas);
+  } catch (error) {
+    console.error('QR Code generation error:', error);
+    document.getElementById('qrCodeContainer').innerHTML = `
+      <p style="color: var(--error); padding: 2rem;">QR 코드 생성에 실패했습니다.</p>
+    `;
+  }
   
   // Close on background click
   modal.addEventListener('click', function(e) {
@@ -2634,19 +2635,16 @@ function generateQRCode() {
   previewContainer.innerHTML = '';
   
   // Generate QR code
-  QRCode.toCanvas(previewContainer, content, {
-    width: size,
-    margin: 2,
-    color: {
-      dark: foreground,
-      light: background
-    }
-  }, function (error) {
-    if (error) {
-      console.error('QR Code generation error:', error);
-      alert('QR 코드 생성에 실패했습니다: ' + error.message);
-      return;
-    }
+  try {
+    previewContainer.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    QRCodeGenerator.toCanvas(canvas, content, {
+      width: size,
+      margin: 2,
+      foregroundColor: foreground,
+      backgroundColor: background
+    });
+    previewContainer.appendChild(canvas);
     
     // Show preview section
     document.getElementById('qrPreviewSection').style.display = 'block';
@@ -2662,7 +2660,11 @@ function generateQRCode() {
         block: 'nearest' 
       });
     }, 100);
-  });
+  } catch (error) {
+    console.error('QR Code generation error:', error);
+    alert('QR 코드 생성에 실패했습니다: ' + error.message);
+    return;
+  }
 }
 
 // Download generated QR code
