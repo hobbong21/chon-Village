@@ -2368,7 +2368,7 @@ app.get('/', (c) => {
           
           /* Mobile navigation */
           .mobile-nav {
-            @apply fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40;
+            @apply fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 md:hidden;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
           }
           
