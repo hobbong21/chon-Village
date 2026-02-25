@@ -2488,10 +2488,6 @@ app.get('/', (c) => {
                         <i class="fas fa-user"></i>
                         <span>프로필</span>
                     </a>
-                    <a href="#" class="nav-link" data-page="settings">
-                        <i class="fas fa-cog"></i>
-                        <span>설정</span>
-                    </a>
                 </nav>
                 
                 <!-- Right Side Actions -->
@@ -2500,11 +2496,6 @@ app.get('/', (c) => {
                     <div class="search-desktop">
                         <input type="text" id="searchInput" placeholder="검색..." class="search-input">
                     </div>
-                    
-                    <!-- Dark Mode Toggle -->
-                    <button onclick="toggleDarkMode()" class="notification-btn" title="다크 모드 전환">
-                        <i id="darkModeIcon" class="fas fa-moon"></i>
-                    </button>
                     
                     <!-- Notifications (Desktop - toggle sidebar) -->
                     <button onclick="toggleNotificationSidebar()" class="notification-btn hidden md:flex">
@@ -2516,6 +2507,11 @@ app.get('/', (c) => {
                     <button onclick="showNotificationCenter()" class="notification-btn md:hidden">
                         <i class="fas fa-bell"></i>
                         <span id="notificationBadgeMobile" class="notification-badge hidden">0</span>
+                    </button>
+                    
+                    <!-- Settings Button (Desktop) -->
+                    <button onclick="loadPage('settings')" class="icon-btn" title="설정" style="margin-left: 0.5rem;">
+                        <i class="fas fa-cog"></i>
                     </button>
                     
                     <!-- Hamburger Menu (Mobile) -->

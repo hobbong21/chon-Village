@@ -1784,6 +1784,22 @@ async function loadSettingsPage() {
           </div>
           
           <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div class="setting-item">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                  <i class="fas fa-moon" style="color: var(--gray-600);"></i>
+                  <div>
+                    <div style="font-weight: 600;">다크 모드</div>
+                    <div style="font-size: var(--text-sm); color: var(--gray-600);">어두운 테마 사용</div>
+                  </div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="darkModeToggle" onchange="toggleDarkModeFromSettings(this.checked)">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+            
             <button onclick="clearCache()" class="setting-item">
               <div style="display: flex; align-items: center; gap: 1rem;">
                 <i class="fas fa-broom" style="color: var(--gray-600);"></i>
@@ -1931,6 +1947,13 @@ function loadSettings() {
       element.checked = settings[key];
     }
   });
+  
+  // Load dark mode setting
+  const currentTheme = localStorage.getItem('theme') || 'light';
+  const darkModeToggle = document.getElementById('darkModeToggle');
+  if (darkModeToggle) {
+    darkModeToggle.checked = currentTheme === 'dark';
+  }
 }
 
 // Toggle setting
@@ -1968,6 +1991,14 @@ function clearCache() {
     
     alert('캐시가 삭제되었습니다.');
   }
+}
+
+// Toggle dark mode from settings
+function toggleDarkModeFromSettings(enabled) {
+  const theme = enabled ? 'dark' : 'light';
+  localStorage.setItem('theme', theme);
+  document.documentElement.setAttribute('data-theme', theme);
+  console.log(`Theme changed to ${theme}`);
 }
 
 // Show about modal

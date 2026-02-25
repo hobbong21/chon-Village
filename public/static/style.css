@@ -910,6 +910,22 @@ a:hover {
   }
 }
 
+/* Mobile Navigation - 4 items */
+.mobile-nav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 767px) {
+  .mobile-nav {
+    font-size: 0.75rem;
+  }
+  
+  .mobile-nav i {
+    font-size: 1.25rem;
+  }
+}
+
 /* ========================================
    Settings Page Styles
    ======================================== */
