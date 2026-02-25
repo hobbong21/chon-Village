@@ -357,6 +357,9 @@ async function loadPage(page) {
     case 'settings':
       await loadSettingsPage();
       break;
+    case 'qr-generator':
+      await loadQRGeneratorPage();
+      break;
     default:
       await loadFeed();
       break;
@@ -1805,6 +1808,17 @@ async function loadSettingsPage() {
               </div>
             </div>
             
+            <button onclick="loadPage('qr-generator')" class="setting-item">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <i class="fas fa-qrcode" style="color: var(--gray-600);"></i>
+                <div style="flex: 1;">
+                  <div style="font-weight: 600;">QR 코드 생성기</div>
+                  <div style="font-size: var(--text-sm); color: var(--gray-600);">텍스트나 URL을 QR 코드로 변환</div>
+                </div>
+                <i class="fas fa-chevron-right" style="color: var(--gray-400);"></i>
+              </div>
+            </button>
+            
             <button onclick="clearCache()" class="setting-item">
               <div style="display: flex; align-items: center; gap: 1rem;">
                 <i class="fas fa-broom" style="color: var(--gray-600);"></i>
@@ -2210,5 +2224,574 @@ function downloadQRCode() {
     link.click();
     URL.revokeObjectURL(url);
   });
+}
+
+// ========================================
+// QR Code Generator Page
+// ========================================
+
+async function loadQRGeneratorPage() {
+  const mainContent = document.getElementById('mainContent');
+  
+  mainContent.innerHTML = `
+    <div class="card">
+      <div style="margin-bottom: 2rem;">
+        <h2 style="font-size: 2rem; font-weight: var(--font-bold); margin-bottom: 0.5rem;">
+          <i class="fas fa-qrcode" style="color: var(--primary-600);"></i> QR 코드 생성기
+        </h2>
+        <p style="color: var(--gray-600);">텍스트나 URL을 입력하여 QR 코드를 생성하세요</p>
+      </div>
+      
+      <!-- Input Section -->
+      <div style="margin-bottom: 2rem;">
+        <div style="margin-bottom: 1rem;">
+          <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">
+            콘텐츠 타입
+          </label>
+          <select id="qrContentType" onchange="changeQRContentType()" style="
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.5rem;
+            font-size: var(--text-base);
+            background: white;
+          ">
+            <option value="text">텍스트</option>
+            <option value="url">URL (웹사이트)</option>
+            <option value="email">이메일</option>
+            <option value="phone">전화번호</option>
+            <option value="sms">SMS</option>
+            <option value="wifi">WiFi</option>
+          </select>
+        </div>
+        
+        <div id="qrInputContainer">
+          <!-- Dynamic input fields will be inserted here -->
+        </div>
+        
+        <div style="margin-top: 1rem;">
+          <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">
+            QR 코드 크기
+          </label>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <input type="range" id="qrSize" min="128" max="512" value="256" step="64" 
+              style="flex: 1;"
+              oninput="document.getElementById('qrSizeValue').textContent = this.value + 'px'">
+            <span id="qrSizeValue" style="min-width: 60px; text-align: right; color: var(--gray-600);">256px</span>
+          </div>
+        </div>
+        
+        <div style="margin-top: 1rem;">
+          <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">
+            색상
+          </label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-size: var(--text-sm); color: var(--gray-600); margin-bottom: 0.25rem;">전경색 (QR 코드)</label>
+              <input type="color" id="qrForeground" value="#1f2937" style="
+                width: 100%;
+                height: 40px;
+                border: 1px solid var(--gray-300);
+                border-radius: 0.375rem;
+                cursor: pointer;
+              ">
+            </div>
+            <div>
+              <label style="display: block; font-size: var(--text-sm); color: var(--gray-600); margin-bottom: 0.25rem;">배경색</label>
+              <input type="color" id="qrBackground" value="#ffffff" style="
+                width: 100%;
+                height: 40px;
+                border: 1px solid var(--gray-300);
+                border-radius: 0.375rem;
+                cursor: pointer;
+              ">
+            </div>
+          </div>
+        </div>
+        
+        <button onclick="generateQRCode()" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem; padding: 1rem; font-size: 1.125rem;">
+          <i class="fas fa-magic"></i> QR 코드 생성
+        </button>
+      </div>
+      
+      <!-- Preview Section -->
+      <div id="qrPreviewSection" style="display: none;">
+        <div style="border-top: 2px solid var(--gray-200); padding-top: 2rem; margin-top: 2rem;">
+          <h3 style="font-size: 1.25rem; font-weight: var(--font-bold); margin-bottom: 1rem;">
+            <i class="fas fa-eye"></i> 미리보기
+          </h3>
+          
+          <div style="text-align: center; margin-bottom: 1.5rem;">
+            <div id="qrCodePreview" style="
+              display: inline-block;
+              padding: 1.5rem;
+              background: white;
+              border-radius: 0.5rem;
+              border: 2px solid var(--gray-200);
+              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            "></div>
+          </div>
+          
+          <div style="background: var(--gray-50); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+            <p style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 0.5rem;">생성된 콘텐츠</p>
+            <div id="qrContentDisplay" style="
+              background: white;
+              padding: 0.75rem;
+              border-radius: 0.375rem;
+              border: 1px solid var(--gray-300);
+              font-family: monospace;
+              font-size: 0.875rem;
+              color: var(--gray-800);
+              word-break: break-all;
+              max-height: 150px;
+              overflow-y: auto;
+            "></div>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem;">
+            <button onclick="downloadGeneratedQR()" class="btn btn-primary">
+              <i class="fas fa-download"></i> 다운로드 (PNG)
+            </button>
+            <button onclick="copyQRContent()" class="btn btn-secondary">
+              <i class="fas fa-copy"></i> 콘텐츠 복사
+            </button>
+            <button onclick="printQRCode()" class="btn btn-secondary">
+              <i class="fas fa-print"></i> 인쇄
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Help Section -->
+      <div style="margin-top: 2rem; padding: 1.5rem; background: var(--info-light); border-left: 4px solid var(--info); border-radius: 0.5rem;">
+        <h4 style="font-weight: 600; margin-bottom: 0.75rem; color: var(--info-dark);">
+          <i class="fas fa-info-circle"></i> 사용 팁
+        </h4>
+        <ul style="list-style: disc; margin-left: 1.5rem; color: var(--gray-700); line-height: 1.8;">
+          <li>URL은 'http://' 또는 'https://'로 시작해야 합니다</li>
+          <li>더 많은 정보를 담을수록 QR 코드가 복잡해집니다</li>
+          <li>스캔하기 쉽도록 대비가 높은 색상을 사용하세요</li>
+          <li>인쇄할 경우 최소 256px 이상의 크기를 권장합니다</li>
+          <li>생성된 QR 코드는 오프라인에서도 작동합니다</li>
+        </ul>
+      </div>
+    </div>
+  `;
+  
+  // Initialize with default content type
+  changeQRContentType();
+}
+
+// Change QR content type and update input fields
+function changeQRContentType() {
+  const contentType = document.getElementById('qrContentType').value;
+  const container = document.getElementById('qrInputContainer');
+  
+  let inputHTML = '';
+  
+  switch (contentType) {
+    case 'text':
+      inputHTML = `
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">
+          텍스트 입력
+        </label>
+        <textarea id="qrTextInput" placeholder="QR 코드로 변환할 텍스트를 입력하세요..." style="
+          width: 100%;
+          min-height: 120px;
+          padding: 0.75rem;
+          border: 1px solid var(--gray-300);
+          border-radius: 0.5rem;
+          font-size: var(--text-base);
+          resize: vertical;
+        "></textarea>
+      `;
+      break;
+      
+    case 'url':
+      inputHTML = `
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">
+          웹사이트 URL
+        </label>
+        <input type="url" id="qrUrlInput" placeholder="https://example.com" style="
+          width: 100%;
+          padding: 0.75rem;
+          border: 1px solid var(--gray-300);
+          border-radius: 0.5rem;
+          font-size: var(--text-base);
+        ">
+      `;
+      break;
+      
+    case 'email':
+      inputHTML = `
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">
+          이메일 주소
+        </label>
+        <input type="email" id="qrEmailInput" placeholder="example@email.com" style="
+          width: 100%;
+          padding: 0.75rem;
+          border: 1px solid var(--gray-300);
+          border-radius: 0.5rem;
+          font-size: var(--text-base);
+          margin-bottom: 0.75rem;
+        ">
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">
+          제목 (선택)
+        </label>
+        <input type="text" id="qrEmailSubject" placeholder="이메일 제목" style="
+          width: 100%;
+          padding: 0.75rem;
+          border: 1px solid var(--gray-300);
+          border-radius: 0.5rem;
+          font-size: var(--text-base);
+          margin-bottom: 0.75rem;
+        ">
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">
+          본문 (선택)
+        </label>
+        <textarea id="qrEmailBody" placeholder="이메일 본문" style="
+          width: 100%;
+          min-height: 80px;
+          padding: 0.75rem;
+          border: 1px solid var(--gray-300);
+          border-radius: 0.5rem;
+          font-size: var(--text-base);
+          resize: vertical;
+        "></textarea>
+      `;
+      break;
+      
+    case 'phone':
+      inputHTML = `
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">
+          전화번호
+        </label>
+        <input type="tel" id="qrPhoneInput" placeholder="+82-10-1234-5678" style="
+          width: 100%;
+          padding: 0.75rem;
+          border: 1px solid var(--gray-300);
+          border-radius: 0.5rem;
+          font-size: var(--text-base);
+        ">
+        <p style="font-size: var(--text-sm); color: var(--gray-500); margin-top: 0.5rem;">
+          <i class="fas fa-info-circle"></i> 국가 코드를 포함하세요 (예: +82)
+        </p>
+      `;
+      break;
+      
+    case 'sms':
+      inputHTML = `
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">
+          전화번호
+        </label>
+        <input type="tel" id="qrSmsPhone" placeholder="+82-10-1234-5678" style="
+          width: 100%;
+          padding: 0.75rem;
+          border: 1px solid var(--gray-300);
+          border-radius: 0.5rem;
+          font-size: var(--text-base);
+          margin-bottom: 0.75rem;
+        ">
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">
+          메시지
+        </label>
+        <textarea id="qrSmsMessage" placeholder="SMS 메시지 내용" style="
+          width: 100%;
+          min-height: 80px;
+          padding: 0.75rem;
+          border: 1px solid var(--gray-300);
+          border-radius: 0.5rem;
+          font-size: var(--text-base);
+          resize: vertical;
+        "></textarea>
+      `;
+      break;
+      
+    case 'wifi':
+      inputHTML = `
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">
+          네트워크 이름 (SSID)
+        </label>
+        <input type="text" id="qrWifiSSID" placeholder="WiFi 이름" style="
+          width: 100%;
+          padding: 0.75rem;
+          border: 1px solid var(--gray-300);
+          border-radius: 0.5rem;
+          font-size: var(--text-base);
+          margin-bottom: 0.75rem;
+        ">
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">
+          비밀번호
+        </label>
+        <input type="text" id="qrWifiPassword" placeholder="WiFi 비밀번호" style="
+          width: 100%;
+          padding: 0.75rem;
+          border: 1px solid var(--gray-300);
+          border-radius: 0.5rem;
+          font-size: var(--text-base);
+          margin-bottom: 0.75rem;
+        ">
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">
+          보안 타입
+        </label>
+        <select id="qrWifiSecurity" style="
+          width: 100%;
+          padding: 0.75rem;
+          border: 1px solid var(--gray-300);
+          border-radius: 0.5rem;
+          font-size: var(--text-base);
+        ">
+          <option value="WPA">WPA/WPA2</option>
+          <option value="WEP">WEP</option>
+          <option value="nopass">보안 없음</option>
+        </select>
+      `;
+      break;
+  }
+  
+  container.innerHTML = inputHTML;
+}
+
+// Generate QR code
+function generateQRCode() {
+  const contentType = document.getElementById('qrContentType').value;
+  let content = '';
+  
+  // Get content based on type
+  switch (contentType) {
+    case 'text':
+      content = document.getElementById('qrTextInput')?.value || '';
+      break;
+      
+    case 'url':
+      content = document.getElementById('qrUrlInput')?.value || '';
+      if (content && !content.match(/^https?:\/\//i)) {
+        alert('URL은 http:// 또는 https://로 시작해야 합니다.');
+        return;
+      }
+      break;
+      
+    case 'email':
+      const email = document.getElementById('qrEmailInput')?.value || '';
+      const subject = document.getElementById('qrEmailSubject')?.value || '';
+      const body = document.getElementById('qrEmailBody')?.value || '';
+      if (!email) {
+        alert('이메일 주소를 입력해주세요.');
+        return;
+      }
+      content = `mailto:${email}`;
+      if (subject || body) {
+        const params = [];
+        if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
+        if (body) params.push(`body=${encodeURIComponent(body)}`);
+        content += '?' + params.join('&');
+      }
+      break;
+      
+    case 'phone':
+      const phone = document.getElementById('qrPhoneInput')?.value || '';
+      if (!phone) {
+        alert('전화번호를 입력해주세요.');
+        return;
+      }
+      content = `tel:${phone}`;
+      break;
+      
+    case 'sms':
+      const smsPhone = document.getElementById('qrSmsPhone')?.value || '';
+      const smsMessage = document.getElementById('qrSmsMessage')?.value || '';
+      if (!smsPhone) {
+        alert('전화번호를 입력해주세요.');
+        return;
+      }
+      content = `sms:${smsPhone}${smsMessage ? '?body=' + encodeURIComponent(smsMessage) : ''}`;
+      break;
+      
+    case 'wifi':
+      const ssid = document.getElementById('qrWifiSSID')?.value || '';
+      const password = document.getElementById('qrWifiPassword')?.value || '';
+      const security = document.getElementById('qrWifiSecurity')?.value || 'WPA';
+      if (!ssid) {
+        alert('WiFi 이름을 입력해주세요.');
+        return;
+      }
+      content = `WIFI:T:${security};S:${ssid};P:${password};H:false;;`;
+      break;
+  }
+  
+  if (!content) {
+    alert('내용을 입력해주세요.');
+    return;
+  }
+  
+  // Get options
+  const size = parseInt(document.getElementById('qrSize').value);
+  const foreground = document.getElementById('qrForeground').value;
+  const background = document.getElementById('qrBackground').value;
+  
+  // Clear previous QR code
+  const previewContainer = document.getElementById('qrCodePreview');
+  previewContainer.innerHTML = '';
+  
+  // Generate QR code
+  QRCode.toCanvas(previewContainer, content, {
+    width: size,
+    margin: 2,
+    color: {
+      dark: foreground,
+      light: background
+    }
+  }, function (error) {
+    if (error) {
+      console.error('QR Code generation error:', error);
+      alert('QR 코드 생성에 실패했습니다: ' + error.message);
+      return;
+    }
+    
+    // Show preview section
+    document.getElementById('qrPreviewSection').style.display = 'block';
+    document.getElementById('qrContentDisplay').textContent = content;
+    
+    // Store content for later use
+    window.generatedQRContent = content;
+    
+    // Scroll to preview
+    setTimeout(() => {
+      document.getElementById('qrPreviewSection').scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'nearest' 
+      });
+    }, 100);
+  });
+}
+
+// Download generated QR code
+function downloadGeneratedQR() {
+  const canvas = document.querySelector('#qrCodePreview canvas');
+  if (!canvas) {
+    alert('QR 코드를 먼저 생성해주세요.');
+    return;
+  }
+  
+  const contentType = document.getElementById('qrContentType').value;
+  const timestamp = new Date().getTime();
+  
+  canvas.toBlob(function(blob) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `qrcode-${contentType}-${timestamp}.png`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+// Copy QR content to clipboard
+function copyQRContent() {
+  const content = window.generatedQRContent;
+  if (!content) {
+    alert('생성된 콘텐츠가 없습니다.');
+    return;
+  }
+  
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(content).then(() => {
+      alert('콘텐츠가 클립보드에 복사되었습니다!');
+    }).catch(err => {
+      console.error('Failed to copy:', err);
+      alert('복사에 실패했습니다.');
+    });
+  } else {
+    // Fallback
+    const textArea = document.createElement('textarea');
+    textArea.value = content;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+      document.execCommand('copy');
+      alert('콘텐츠가 클립보드에 복사되었습니다!');
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      alert('복사에 실패했습니다.');
+    }
+    
+    document.body.removeChild(textArea);
+  }
+}
+
+// Print QR code
+function printQRCode() {
+  const canvas = document.querySelector('#qrCodePreview canvas');
+  if (!canvas) {
+    alert('QR 코드를 먼저 생성해주세요.');
+    return;
+  }
+  
+  const dataUrl = canvas.toDataURL('image/png');
+  const content = window.generatedQRContent;
+  
+  const printWindow = window.open('', '', 'width=800,height=600');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>QR 코드 인쇄</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem;
+        }
+        h1 {
+          margin-bottom: 1rem;
+        }
+        img {
+          border: 2px solid #e5e7eb;
+          padding: 1rem;
+          margin: 2rem 0;
+        }
+        .content {
+          max-width: 600px;
+          word-break: break-all;
+          background: #f9fafb;
+          padding: 1rem;
+          border-radius: 0.5rem;
+          margin-top: 1rem;
+        }
+        @media print {
+          button {
+            display: none;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <h1>CHON Village QR 코드</h1>
+      <img src="${dataUrl}" alt="QR Code">
+      <div class="content">
+        <strong>콘텐츠:</strong><br>
+        ${content}
+      </div>
+      <button onclick="window.print()" style="
+        margin-top: 2rem;
+        padding: 0.75rem 2rem;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        cursor: pointer;
+      ">인쇄</button>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
 }
 
